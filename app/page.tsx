@@ -6,6 +6,7 @@ import FeaturedProducts from "../components/home/FeaturedProducts";
 import Offers from "../components/home/Offers";
 import Benefits from "../components/home/Benefits";
 import Footer from "../components/layout/Footer";
+import FloatingCartButton from "../components/cart/FloatingCartButton";
 
 export default function Home() {
   return (
@@ -18,6 +19,7 @@ export default function Home() {
       <Offers />
       <Benefits />
       <Footer />
+      <FloatingCartButton />
     </main>
   );
 }
