@@ -1,49 +1,56 @@
+"use client";
+
+import { useState } from "react";
+import { useCart } from "../../context/CartContext";
+import CartDrawer from "../cart/CartDrawer";
+
 export default function Navbar() {
+  const [cartOpen, setCartOpen] = useState(false);
+  const { totalItems } = useCart();
+
   return (
-    <nav className="bg-white shadow-md">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-6">
+    <>
+      <nav className="bg-white shadow-md">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-6">
+          <div className="flex flex-col">
+            <h1 className="text-4xl font-black">
+              <span className="text-black">Merca</span>
+              <span className="text-green-600">Nova</span>
+            </h1>
+            <span className="text-green-600 font-bold italic">GO</span>
+          </div>
 
-        {/* Logo */}
-        <div className="flex flex-col">
-          <h1 className="text-4xl font-black">
-            <span className="text-black">Merca</span>
-            <span className="text-green-600">Nova</span>
-          </h1>
+          <div className="flex-1 hidden lg:flex">
+            <input
+              type="text"
+              placeholder="¿Qué deseas cocinar hoy?"
+              className="w-full rounded-l-xl border border-zinc-300 px-5 py-3 outline-none text-black"
+            />
+            <button className="bg-green-600 hover:bg-green-700 text-white px-6 rounded-r-xl font-bold">
+              Buscar
+            </button>
+          </div>
 
-          <span className="text-green-600 font-bold italic">
-            GO
-          </span>
-        </div>
+          <div className="hidden xl:flex gap-8 font-semibold text-zinc-700">
+            <button>Inicio</button>
+            <button>Categorías</button>
+            <button>Ofertas</button>
+            <button>Combos</button>
+            <button>Nosotros</button>
+            <button>Contacto</button>
+          </div>
 
-        {/* Buscador */}
-        <div className="flex-1 hidden lg:flex">
-          <input
-            type="text"
-            placeholder="¿Qué producto estás buscando?"
-            className="w-full rounded-l-xl border border-zinc-300 px-5 py-3 outline-none"
-          />
-
-          <button className="bg-green-600 hover:bg-green-700 text-white px-6 rounded-r-xl font-bold">
-            Buscar
+          <button
+            type="button"
+            onClick={() => setCartOpen(true)}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-bold"
+          >
+            🛒 Mi canasta ({totalItems})
           </button>
         </div>
+      </nav>
 
-        {/* Menú */}
-        <div className="hidden xl:flex gap-8 font-semibold text-zinc-700">
-          <button>Inicio</button>
-          <button>Categorías</button>
-          <button>Ofertas</button>
-          <button>Combos</button>
-          <button>Nosotros</button>
-          <button>Contacto</button>
-        </div>
-
-        {/* Carrito */}
-        <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-bold">
-          🛒 Mi canasta
-        </button>
-
-      </div>
-    </nav>
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
+    </>
   );
 }

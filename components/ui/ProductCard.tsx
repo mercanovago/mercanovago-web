@@ -1,16 +1,50 @@
+"use client";
+
 import type { Product } from "../../data/products";
+import { useCart } from "../../context/CartContext";
 
 export default function ProductCard({ product }: { product: Product }) {
+  const { addToCart } = useCart();
+
   return (
     <article className="bg-white rounded-3xl overflow-hidden border border-zinc-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition">
-      <img src={product.image} alt={product.name} className="h-48 w-full object-cover" />
+      <img
+        src={product.image}
+        alt={product.name}
+        className="h-48 w-full object-cover"
+      />
+
       <div className="p-4 text-black">
-        <p className="text-xs font-bold text-green-600">{product.category}</p>
-        <h3 className="text-xl font-black mt-1">{product.name}</h3>
-        <p className="text-sm text-zinc-500">{product.unit} · {product.approx}</p>
+        <p className="text-xs font-bold text-green-600">
+          {product.category}
+        </p>
+
+        <h3 className="text-xl font-black mt-1">
+          {product.name}
+        </h3>
+
+        <p className="text-sm text-zinc-500">
+          {product.unit} · {product.approx}
+        </p>
+
         <div className="flex items-center justify-between mt-4">
-          <p className="text-3xl font-black">${product.price.toFixed(2)}</p>
-          <button className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold">
+          <p className="text-3xl font-black">
+            ${product.price.toFixed(2)}
+          </p>
+
+          <button
+            type="button"
+            onClick={() =>
+              addToCart({
+                id: product.id,
+                name: product.name,
+                image: product.image,
+                price: product.price,
+                unit: product.unit,
+              })
+            }
+            className="bg-green-600 hover:bg-green-700 transition text-white px-4 py-2 rounded-xl font-bold"
+          >
             Agregar
           </button>
         </div>
