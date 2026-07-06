@@ -2,98 +2,73 @@
 
 export default function Hero() {
   return (
-    <section className="bg-black py-14">
-      <div className="max-w-screen-2xl mx-auto px-8">
-        <div className="grid lg:grid-cols-2 gap-12 items-center rounded-[40px] overflow-hidden bg-gradient-to-r from-black via-zinc-950 to-green-950 shadow-2xl">
-
-          {/* TEXTO */}
-
-          <div className="p-14">
-
-            <span className="inline-flex items-center gap-2 bg-green-600 text-white px-5 py-2 rounded-full text-sm font-black">
-              🚚 ENTREGA EL MISMO DÍA EN RIOBAMBA
+    <section className="bg-zinc-950 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-screen-2xl overflow-hidden rounded-[32px] bg-gradient-to-br from-green-950 via-zinc-950 to-black shadow-2xl">
+        <div className="grid items-center gap-8 lg:grid-cols-2">
+          <div className="p-6 sm:p-10 lg:p-14">
+            <span className="inline-flex rounded-full bg-green-600 px-4 py-2 text-xs font-black text-white sm:text-sm">
+              Entrega el mismo día · Riobamba
             </span>
 
-            <h1 className="mt-8 text-6xl xl:text-7xl font-black leading-tight">
-              Tu mercado,
-              <br />
-              <span className="text-green-500">
-                más rápido.
+            <h1 className="mt-6 text-4xl font-black leading-tight text-white sm:text-5xl lg:text-7xl">
+              Tu mercado fresco,
+              <span className="block text-green-400">
+                directo a casa.
               </span>
             </h1>
 
-            <p className="mt-8 text-zinc-300 text-xl leading-9 max-w-xl">
-              Compra frutas, verduras, lácteos, abarrotes y productos
-              frescos desde la comodidad de tu hogar.
-
-              Nuestro compromiso es ofrecerte calidad,
-              rapidez y atención personalizada.
+            <p className="mt-6 max-w-xl text-base leading-7 text-zinc-300 sm:text-lg lg:text-xl">
+              Compra frutas, verduras, lácteos y abarrotes seleccionados con
+              cuidado. Atención cercana, rápida y confiable.
             </p>
 
-            <div className="flex gap-5 mt-10">
-
-              <button className="bg-green-600 hover:bg-green-700 transition px-8 py-5 rounded-2xl text-lg font-black">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <a
+                href="#catalogo"
+                className="rounded-2xl bg-green-600 px-6 py-4 text-center font-black text-white hover:bg-green-700"
+              >
                 Comprar ahora
-              </button>
+              </a>
 
-              <button className="border border-zinc-600 hover:border-white transition px-8 py-5 rounded-2xl text-lg font-black">
-                Ver ofertas
-              </button>
-
+              <a
+                href="#catalogo"
+                className="rounded-2xl border border-white/20 px-6 py-4 text-center font-black text-white hover:border-green-400"
+              >
+                Ver productos
+              </a>
             </div>
 
-            <div className="flex gap-10 mt-12">
-
+            <div className="mt-8 grid grid-cols-3 gap-4 text-white">
               <div>
-                <p className="text-4xl font-black text-green-500">
+                <p className="text-2xl font-black text-green-400 sm:text-3xl">
                   +800
                 </p>
-
-                <p className="text-zinc-400">
-                  Productos
-                </p>
+                <p className="text-xs text-zinc-400 sm:text-sm">productos</p>
               </div>
 
               <div>
-                <p className="text-4xl font-black text-green-500">
+                <p className="text-2xl font-black text-green-400 sm:text-3xl">
                   30 min
                 </p>
-
-                <p className="text-zinc-400">
-                  Entrega promedio
-                </p>
+                <p className="text-xs text-zinc-400 sm:text-sm">promedio</p>
               </div>
 
               <div>
-                <p className="text-4xl font-black text-green-500">
+                <p className="text-2xl font-black text-green-400 sm:text-3xl">
                   100%
                 </p>
-
-                <p className="text-zinc-400">
-                  Frescura garantizada
-                </p>
+                <p className="text-xs text-zinc-400 sm:text-sm">frescura</p>
               </div>
-
             </div>
-
           </div>
 
-          {/* IMAGEN */}
-
-          <div className="p-10">
-
-            <div className="overflow-hidden rounded-[32px] shadow-2xl">
-
-              <img
-                src="/hero-market.jpg"
-                alt="Mercado"
-                className="w-full h-[650px] object-cover hover:scale-105 transition duration-700"
-              />
-
-            </div>
-
+          <div className="p-4 sm:p-6 lg:p-8">
+            <img
+              src="/hero-market.jpg"
+              alt="MercaNova GO productos frescos"
+              className="h-72 w-full rounded-[28px] object-cover shadow-2xl sm:h-96 lg:h-[560px]"
+            />
           </div>
-
         </div>
       </div>
     </section>
