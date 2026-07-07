@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 interface Props {
   subtotal: number;
   totalItems: number;
@@ -41,9 +43,12 @@ export default function CartSummary({ subtotal, totalItems }: Props) {
         </span>
       </div>
 
-      <button className="w-full rounded-2xl bg-green-600 py-4 text-lg font-black text-white shadow-lg transition hover:bg-green-700 active:scale-95">
+      <Link
+        href="/checkout"
+        className="block w-full rounded-2xl bg-green-600 py-4 text-center text-lg font-black text-white shadow-lg transition hover:bg-green-700 active:scale-95"
+      >
         Continuar compra →
-      </button>
+      </Link>
     </div>
   );
 }
