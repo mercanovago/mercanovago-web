@@ -1,75 +1,99 @@
 "use client";
 
+import Button from "../shared/Button";
+
 export default function Hero() {
   return (
-    <section className="bg-zinc-950 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-screen-2xl overflow-hidden rounded-[32px] bg-gradient-to-br from-green-950 via-zinc-950 to-black shadow-2xl">
-        <div className="grid items-center gap-8 lg:grid-cols-2">
-          <div className="p-6 sm:p-10 lg:p-14">
-            <span className="inline-flex rounded-full bg-green-600 px-4 py-2 text-xs font-black text-white sm:text-sm">
-              Entrega el mismo día · Riobamba
+    <section className="bg-gradient-to-br from-green-950 via-green-900 to-black">
+      <div className="mx-auto flex max-w-7xl flex-col items-center gap-10 px-6 py-12 lg:flex-row lg:justify-between lg:px-10 lg:py-20">
+
+        {/* TEXTO */}
+
+        <div className="max-w-xl text-center lg:text-left">
+
+          <span className="inline-block rounded-full bg-green-600 px-4 py-2 text-sm font-bold text-white">
+            🚚 Entregas el mismo día
+          </span>
+
+          <h1 className="mt-6 text-4xl font-black leading-tight text-white sm:text-5xl lg:text-6xl">
+            Tu mercado
+            <br />
+            <span className="text-green-400">
+              fresco directo
             </span>
+            <br />
+            a casa.
+          </h1>
 
-            <h1 className="mt-6 text-4xl font-black leading-tight text-white sm:text-5xl lg:text-7xl">
-              Tu mercado fresco,
-              <span className="block text-green-400">
-                directo a casa.
-              </span>
-            </h1>
+          <p className="mt-6 text-lg leading-relaxed text-zinc-300">
+            Compra frutas, verduras, lácteos y abarrotes del Mercado
+            Mayorista de Riobamba sin salir de casa.
+          </p>
 
-            <p className="mt-6 max-w-xl text-base leading-7 text-zinc-300 sm:text-lg lg:text-xl">
-              Compra frutas, verduras, lácteos y abarrotes seleccionados con
-              cuidado. Atención cercana, rápida y confiable.
-            </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-4 lg:justify-start">
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <a
-                href="#catalogo"
-                className="rounded-2xl bg-green-600 px-6 py-4 text-center font-black text-white hover:bg-green-700"
-              >
-                Comprar ahora
-              </a>
+            <Button>
+              Comprar ahora
+            </Button>
 
-              <a
-                href="#catalogo"
-                className="rounded-2xl border border-white/20 px-6 py-4 text-center font-black text-white hover:border-green-400"
-              >
-                Ver productos
-              </a>
-            </div>
+            <Button variant="secondary">
+              Ver catálogo
+            </Button>
 
-            <div className="mt-8 grid grid-cols-3 gap-4 text-white">
-              <div>
-                <p className="text-2xl font-black text-green-400 sm:text-3xl">
-                  +800
-                </p>
-                <p className="text-xs text-zinc-400 sm:text-sm">productos</p>
-              </div>
-
-              <div>
-                <p className="text-2xl font-black text-green-400 sm:text-3xl">
-                  30 min
-                </p>
-                <p className="text-xs text-zinc-400 sm:text-sm">promedio</p>
-              </div>
-
-              <div>
-                <p className="text-2xl font-black text-green-400 sm:text-3xl">
-                  100%
-                </p>
-                <p className="text-xs text-zinc-400 sm:text-sm">frescura</p>
-              </div>
-            </div>
           </div>
 
-          <div className="p-4 sm:p-6 lg:p-8">
+          <div className="mt-10 grid grid-cols-3 gap-6">
+
+            <div>
+              <p className="text-3xl font-black text-green-400">
+                +800
+              </p>
+
+              <p className="text-sm text-zinc-300">
+                Productos
+              </p>
+            </div>
+
+            <div>
+              <p className="text-3xl font-black text-green-400">
+                20 min
+              </p>
+
+              <p className="text-sm text-zinc-300">
+                Entrega promedio
+              </p>
+            </div>
+
+            <div>
+              <p className="text-3xl font-black text-green-400">
+                100%
+              </p>
+
+              <p className="text-sm text-zinc-300">
+                Frescura garantizada
+              </p>
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* IMAGEN */}
+
+        <div className="w-full max-w-xl">
+
+          <div className="overflow-hidden rounded-3xl border border-white/10 shadow-2xl">
+
             <img
               src="/hero-market.jpg"
-              alt="MercaNova GO productos frescos"
-              className="h-72 w-full rounded-[28px] object-cover shadow-2xl sm:h-96 lg:h-[560px]"
+              alt="MercaNova"
+              className="h-full w-full object-cover transition duration-700 hover:scale-105"
             />
+
           </div>
+
         </div>
+
       </div>
     </section>
   );

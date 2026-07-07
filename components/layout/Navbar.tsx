@@ -11,15 +11,15 @@ interface NavbarProps {
 
 export default function Navbar({ searchQuery, setSearchQuery }: NavbarProps) {
   const [cartOpen, setCartOpen] = useState(false);
-  const { totalItems } = useCart();
+  const { totalItems, subtotal } = useCart();
 
   return (
     <>
-      <nav className="sticky top-0 z-40 bg-white shadow-md">
-        <div className="mx-auto flex max-w-screen-2xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+      <nav className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 shadow-sm backdrop-blur">
+        <div className="mx-auto w-full max-w-[1500px] px-4 py-4 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between gap-4">
             <div className="leading-none">
-              <h1 className="text-3xl font-black sm:text-4xl">
+              <h1 className="text-4xl font-black tracking-tight sm:text-5xl lg:text-4xl">
                 <span className="text-black">Merca</span>
                 <span className="text-green-600">Nova</span>
               </h1>
@@ -28,45 +28,46 @@ export default function Navbar({ searchQuery, setSearchQuery }: NavbarProps) {
               </span>
             </div>
 
+            <div className="hidden items-center gap-7 text-base font-black text-zinc-700 lg:flex">
+              <button>Inicio</button>
+              <button>Categorías</button>
+              <button>Ofertas</button>
+              <button>Combos</button>
+              <button>Nosotros</button>
+              <button>Contacto</button>
+            </div>
+
             <button
               type="button"
               onClick={() => setCartOpen(true)}
-              className="rounded-xl bg-green-600 px-4 py-3 text-sm font-black text-white hover:bg-green-700 lg:hidden"
+              className="rounded-2xl bg-green-600 px-5 py-4 text-base font-black text-white shadow-lg hover:bg-green-700 lg:px-7"
             >
-              🛒 ({totalItems})
+              <span className="hidden sm:inline">
+                🛒 Mi canasta ({totalItems})
+              </span>
+              <span className="sm:hidden">🛒 ({totalItems})</span>
             </button>
           </div>
 
-          <div className="flex w-full lg:max-w-xl">
+          <div className="mt-4 flex w-full overflow-hidden rounded-2xl border border-zinc-300 bg-white shadow-sm lg:absolute lg:left-1/2 lg:top-5 lg:mt-0 lg:w-[420px] lg:-translate-x-1/2">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="¿Qué producto buscas?"
-              className="w-full rounded-l-xl border border-zinc-300 px-4 py-3 text-black outline-none"
+              className="min-w-0 flex-1 px-5 py-4 text-lg text-black outline-none lg:text-sm"
             />
 
-            <button className="rounded-r-xl bg-green-600 px-5 py-3 font-black text-white hover:bg-green-700">
+            <button className="bg-green-600 px-6 py-4 text-lg font-black text-white hover:bg-green-700 lg:text-sm">
               Buscar
             </button>
           </div>
 
-          <div className="hidden gap-6 font-bold text-zinc-700 xl:flex">
-            <button>Inicio</button>
-            <button>Categorías</button>
-            <button>Ofertas</button>
-            <button>Combos</button>
-            <button>Nosotros</button>
-            <button>Contacto</button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setCartOpen(true)}
-            className="hidden rounded-xl bg-green-600 px-6 py-3 font-black text-white hover:bg-green-700 lg:block"
-          >
-            🛒 Mi canasta ({totalItems})
-          </button>
+          {totalItems > 0 && (
+            <div className="mt-3 rounded-2xl bg-green-50 px-4 py-3 text-sm font-bold text-green-700 lg:hidden">
+              🛒 {totalItems} producto(s) en tu canasta · ${subtotal.toFixed(2)}
+            </div>
+          )}
         </div>
       </nav>
 
