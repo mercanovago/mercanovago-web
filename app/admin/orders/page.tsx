@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import AdminGuard from "@/components/admin/AdminGuard";
@@ -8,6 +8,15 @@ import { getAdminOrders } from "@/services/adminOrders";
 import { updateOrderStatus } from "@/services/updateOrderStatus";
 
 const statusOptions = [
+  "Todos",
+  "Pendiente",
+  "Preparando",
+  "En camino",
+  "Entregado",
+  "Cancelado",
+];
+
+const editableStatus = [
   "Pendiente",
   "Preparando",
   "En camino",
@@ -18,8 +27,10 @@ const statusOptions = [
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedStatus, setSelectedStatus] = useState("Todos");
 
   async function loadOrders() {
+    setLoading(true);
     const data = await getAdminOrders();
     setOrders(data);
     setLoading(false);
@@ -28,6 +39,24 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     loadOrders();
   }, []);
+
+  const filteredOrders = useMemo(() => {
+    if (selectedStatus === "Todos") return orders;
+    return orders.filter((order) => order.status === selectedStatus);
+  }, [orders, selectedStatus]);
+
+  const totalSales = orders.reduce(
+    (sum, order) => sum + Number(order.total ?? 0),
+    0
+  );
+
+  const pendingCount = orders.filter(
+    (order) => order.status === "Pendiente"
+  ).length;
+
+  const deliveredCount = orders.filter(
+    (order) => order.status === "Entregado"
+  ).length;
 
   async function handleStatusChange(orderId: number, status: string) {
     await updateOrderStatus(orderId, status);
@@ -49,35 +78,92 @@ export default function AdminOrdersPage() {
 
           <div className="mb-8 mt-6">
             <p className="text-sm font-black uppercase tracking-widest text-green-600">
-              MercaNova GO
+              MercaNova GO 7.5
             </p>
 
             <h1 className="mt-2 text-4xl font-black sm:text-5xl">
-              Pedidos recibidos
+              Pedidos Premium
             </h1>
 
             <p className="mt-3 text-zinc-600">
-              Lista de compras registradas desde el checkout.
+              Control operativo de pedidos, estados y seguimiento comercial.
             </p>
           </div>
 
+          <div className="mb-8 grid gap-5 md:grid-cols-4">
+            <div className="rounded-3xl bg-white p-6 shadow">
+              <p className="text-xs font-black uppercase text-zinc-500">
+                Total pedidos
+              </p>
+              <h2 className="mt-2 text-4xl font-black">{orders.length}</h2>
+            </div>
+
+            <div className="rounded-3xl bg-white p-6 shadow">
+              <p className="text-xs font-black uppercase text-zinc-500">
+                Pendientes
+              </p>
+              <h2 className="mt-2 text-4xl font-black text-yellow-600">
+                {pendingCount}
+              </h2>
+            </div>
+
+            <div className="rounded-3xl bg-white p-6 shadow">
+              <p className="text-xs font-black uppercase text-zinc-500">
+                Entregados
+              </p>
+              <h2 className="mt-2 text-4xl font-black text-green-600">
+                {deliveredCount}
+              </h2>
+            </div>
+
+            <div className="rounded-3xl bg-white p-6 shadow">
+              <p className="text-xs font-black uppercase text-zinc-500">
+                Ventas
+              </p>
+              <h2 className="mt-2 text-4xl font-black text-green-600">
+                ${totalSales.toFixed(2)}
+              </h2>
+            </div>
+          </div>
+
+          <div className="mb-8 flex flex-wrap gap-3">
+            {statusOptions.map((status) => (
+              <button
+                key={status}
+                onClick={() => setSelectedStatus(status)}
+                className={`rounded-full px-5 py-3 text-sm font-black transition ${
+                  selectedStatus === status
+                    ? "bg-green-600 text-white"
+                    : "bg-white text-zinc-600 hover:bg-green-50"
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+
           {loading ? (
-            <p className="font-bold text-zinc-500">Cargando pedidos...</p>
-          ) : orders.length === 0 ? (
+            <div className="rounded-3xl bg-white p-10 text-center shadow">
+              <div className="text-6xl">📦</div>
+              <p className="mt-5 font-bold text-zinc-500">
+                Cargando pedidos...
+              </p>
+            </div>
+          ) : filteredOrders.length === 0 ? (
             <div className="rounded-3xl bg-white p-10 text-center shadow">
               <div className="text-6xl">📦</div>
 
               <h2 className="mt-4 text-2xl font-black">
-                No hay pedidos todavía
+                No hay pedidos en esta categoría
               </h2>
 
               <p className="mt-2 text-zinc-500">
-                Cuando un cliente confirme una compra aparecerá aquí.
+                Cambia el filtro o espera nuevos pedidos.
               </p>
             </div>
           ) : (
             <div className="space-y-5">
-              {orders.map((order) => (
+              {filteredOrders.map((order) => (
                 <article
                   key={order.id}
                   className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm"
@@ -110,7 +196,7 @@ export default function AdminOrdersPage() {
                         }
                         className="rounded-full border border-yellow-200 bg-yellow-100 px-4 py-2 text-sm font-black text-yellow-700"
                       >
-                        {statusOptions.map((status) => (
+                        {editableStatus.map((status) => (
                           <option key={status} value={status}>
                             {status}
                           </option>
