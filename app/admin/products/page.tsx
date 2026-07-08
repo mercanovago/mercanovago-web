@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { getAdminProducts } from "@/services/adminProducts";
 import ProductModal from "@/components/admin/ProductModal";
+import { deleteProduct } from "@/services/deleteProduct";
 
 interface Product {
   id: number;
@@ -45,6 +46,22 @@ export default function AdminProductsPage() {
   function handleEditProduct(product: Product) {
     setSelectedProduct(product);
     setOpenModal(true);
+  }
+
+  async function handleDeleteProduct(product: Product) {
+    const confirmed = confirm(
+      `¿Seguro que deseas eliminar "${product.name}"?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await deleteProduct(product.id);
+      await loadProducts();
+    } catch (error) {
+      console.error(error);
+      alert("No se pudo eliminar el producto.");
+    }
   }
 
   return (
@@ -137,7 +154,10 @@ export default function AdminProductsPage() {
                       Editar
                     </button>
 
-                    <button className="flex-1 rounded-xl bg-red-600 py-3 font-bold text-white hover:bg-red-700">
+                    <button
+                      onClick={() => handleDeleteProduct(product)}
+                      className="flex-1 rounded-xl bg-red-600 py-3 font-bold text-white hover:bg-red-700"
+                    >
                       Eliminar
                     </button>
                   </div>
