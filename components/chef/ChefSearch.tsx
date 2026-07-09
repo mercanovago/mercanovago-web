@@ -1,8 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+
 import { useCart } from "@/components/cart/CartContext";
 import { getLocroRecipeProducts } from "@/services/chefRecipes";
+
+interface ChefProduct {
+  id: number;
+  name: string;
+  image: string;
+  price: number;
+  unit: string;
+}
 
 export default function ChefSearch() {
   const { addToCart } = useCart();
@@ -10,13 +20,29 @@ export default function ChefSearch() {
   const [recipe, setRecipe] = useState("");
   const [loading, setLoading] = useState(false);
   const [showRecipe, setShowRecipe] = useState(false);
+  const [products, setProducts] = useState<ChefProduct[]>([]);
+  const [added, setAdded] = useState(false);
 
-  const ingredients = [
-    "Papa chola",
-    "Queso fresco",
-    "Aguacate",
-    "Cebolla colorada",
-  ];
+  const estimatedCost = products.reduce(
+    (sum, product) => sum + Number(product.price ?? 0),
+    0
+  );
+
+  async function loadLocroRecipe() {
+    setLoading(true);
+    setAdded(false);
+
+    try {
+      const data = await getLocroRecipeProducts();
+      setProducts(data as ChefProduct[]);
+      setShowRecipe(true);
+    } catch (error) {
+      console.error(error);
+      alert("No se pudo cargar la receta.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleSearch() {
     if (!recipe.trim()) {
@@ -24,32 +50,26 @@ export default function ChefSearch() {
       return;
     }
 
-    setShowRecipe(true);
+    await loadLocroRecipe();
   }
 
-  async function addRecipeToCart() {
-    try {
-      setLoading(true);
-
-      const products = await getLocroRecipeProducts();
-
-      products.forEach((product) => {
-        addToCart({
-          id: product.id,
-          name: product.name,
-          image: product.image,
-          price: Number(product.price),
-          unit: product.unit,
-        });
-      });
-
-      alert("Ingredientes agregados a la canasta.");
-    } catch (error) {
-      console.error(error);
-      alert("No se pudieron agregar los ingredientes.");
-    } finally {
-      setLoading(false);
+  function addRecipeToCart() {
+    if (products.length === 0) {
+      alert("Primero carga la receta.");
+      return;
     }
+
+    products.forEach((product) => {
+      addToCart({
+        id: product.id,
+        name: product.name,
+        image: product.image,
+        price: Number(product.price),
+        unit: product.unit,
+      });
+    });
+
+    setAdded(true);
   }
 
   return (
@@ -64,7 +84,13 @@ export default function ChefSearch() {
             key={item}
             onClick={() => {
               setRecipe(item);
-              setShowRecipe(item === "Locro de papa");
+              if (item === "Locro de papa") {
+                loadLocroRecipe();
+              } else {
+                setShowRecipe(false);
+                setProducts([]);
+                alert("Muy pronto tendremos esta receta disponible.");
+              }
             }}
             className="rounded-full bg-zinc-100 px-5 py-2 font-bold hover:bg-green-100"
           >
@@ -83,9 +109,10 @@ export default function ChefSearch() {
 
         <button
           onClick={handleSearch}
-          className="rounded-2xl bg-green-600 px-8 py-5 font-black text-white hover:bg-green-700"
+          disabled={loading}
+          className="rounded-2xl bg-green-600 px-8 py-5 font-black text-white hover:bg-green-700 disabled:bg-zinc-300"
         >
-          Buscar
+          {loading ? "Buscando..." : "Buscar"}
         </button>
       </div>
 
@@ -101,7 +128,7 @@ export default function ChefSearch() {
             Plato tradicional ecuatoriano, ideal para una comida familiar.
           </p>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="mt-6 grid gap-4 md:grid-cols-4">
             <div className="rounded-2xl bg-white p-5 shadow-sm">
               <p className="text-xs font-black uppercase text-zinc-500">
                 Tiempo
@@ -122,28 +149,63 @@ export default function ChefSearch() {
               </p>
               <p className="mt-2 text-2xl font-black text-green-600">Fácil</p>
             </div>
+
+            <div className="rounded-2xl bg-green-50 p-5 shadow-sm">
+              <p className="text-xs font-black uppercase text-green-700">
+                Costo estimado
+              </p>
+              <p className="mt-2 text-2xl font-black text-green-600">
+                ${estimatedCost.toFixed(2)}
+              </p>
+            </div>
           </div>
 
-          <h4 className="mt-8 text-2xl font-black">Ingredientes</h4>
+          <h4 className="mt-8 text-2xl font-black">
+            Ingredientes encontrados
+          </h4>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {ingredients.map((ingredient) => (
+            {products.map((product) => (
               <div
-                key={ingredient}
-                className="rounded-2xl bg-white p-4 font-bold shadow-sm"
+                key={product.id}
+                className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm"
               >
-                🥬 {ingredient}
+                <div>
+                  <p className="font-black">{product.name}</p>
+                  <p className="text-sm text-zinc-500">{product.unit}</p>
+                </div>
+
+                <p className="font-black text-green-600">
+                  ${Number(product.price).toFixed(2)}
+                </p>
               </div>
             ))}
           </div>
 
-          <button
-            onClick={addRecipeToCart}
-            disabled={loading}
-            className="mt-8 w-full rounded-2xl bg-green-600 px-8 py-5 text-xl font-black text-white hover:bg-green-700 disabled:bg-zinc-300"
-          >
-            {loading ? "Agregando..." : "Agregar receta a mi canasta"}
-          </button>
+          {added && (
+            <div className="mt-6 rounded-2xl bg-green-100 p-5 font-black text-green-700">
+              ✅ Ingredientes agregados correctamente a tu canasta.
+            </div>
+          )}
+
+          <div className="mt-8 flex flex-col gap-4 md:flex-row">
+            <button
+              onClick={addRecipeToCart}
+              disabled={loading || products.length === 0}
+              className="flex-1 rounded-2xl bg-green-600 px-8 py-5 text-xl font-black text-white hover:bg-green-700 disabled:bg-zinc-300"
+            >
+              Agregar receta a mi canasta
+            </button>
+
+            {added && (
+              <Link
+                href="/checkout"
+                className="flex-1 rounded-2xl bg-zinc-900 px-8 py-5 text-center text-xl font-black text-white hover:bg-zinc-800"
+              >
+                Ver mi canasta
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </div>
