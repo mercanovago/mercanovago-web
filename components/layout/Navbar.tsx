@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "../../context/CartContext";
 import CartDrawer from "../cart/CartDrawer";
@@ -18,7 +19,7 @@ export default function Navbar({ searchQuery, setSearchQuery }: NavbarProps) {
       <nav className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 shadow-sm backdrop-blur">
         <div className="mx-auto w-full max-w-[1500px] px-4 py-4 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between gap-4">
-            <div className="leading-none">
+            <Link href="/" className="leading-none">
               <h1 className="text-4xl font-black tracking-tight sm:text-5xl lg:text-4xl">
                 <span className="text-black">Merca</span>
                 <span className="text-green-600">Nova</span>
@@ -26,15 +27,26 @@ export default function Navbar({ searchQuery, setSearchQuery }: NavbarProps) {
               <span className="text-sm font-black italic text-green-600">
                 GO
               </span>
-            </div>
+            </Link>
 
             <div className="hidden items-center gap-7 text-base font-black text-zinc-700 lg:flex">
-              <button>Inicio</button>
-              <button>Categorías</button>
-              <button>Ofertas</button>
-              <button>Combos</button>
-              <button>Nosotros</button>
-              <button>Contacto</button>
+              <Link href="/" className="hover:text-green-600">
+                Inicio
+              </Link>
+
+              <button className="hover:text-green-600">Categorías</button>
+              <button className="hover:text-green-600">Ofertas</button>
+              <button className="hover:text-green-600">Combos</button>
+
+              <Link
+                href="/chef"
+                className="rounded-full bg-green-100 px-4 py-2 text-green-700 hover:bg-green-600 hover:text-white"
+              >
+                Chef MercaNova
+              </Link>
+
+              <button className="hover:text-green-600">Nosotros</button>
+              <button className="hover:text-green-600">Contacto</button>
             </div>
 
             <button
@@ -60,6 +72,30 @@ export default function Navbar({ searchQuery, setSearchQuery }: NavbarProps) {
 
             <button className="bg-green-600 px-6 py-4 text-lg font-black text-white hover:bg-green-700 lg:text-sm">
               Buscar
+            </button>
+          </div>
+
+          <div className="mt-4 flex gap-3 overflow-x-auto pb-1 lg:hidden">
+            <Link
+              href="/chef"
+              className="whitespace-nowrap rounded-full bg-green-100 px-5 py-3 text-sm font-black text-green-700"
+            >
+              🍲 Chef MercaNova
+            </Link>
+
+            <Link
+              href="/"
+              className="whitespace-nowrap rounded-full bg-zinc-100 px-5 py-3 text-sm font-black text-zinc-700"
+            >
+              Inicio
+            </Link>
+
+            <button className="whitespace-nowrap rounded-full bg-zinc-100 px-5 py-3 text-sm font-black text-zinc-700">
+              Categorías
+            </button>
+
+            <button className="whitespace-nowrap rounded-full bg-zinc-100 px-5 py-3 text-sm font-black text-zinc-700">
+              Ofertas
             </button>
           </div>
 
