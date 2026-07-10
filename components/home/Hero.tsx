@@ -1,79 +1,69 @@
 "use client";
 
 import Link from "next/link";
-import Button from "../shared/Button";
 
 export default function Hero() {
   return (
-    <section className="bg-gradient-to-br from-green-950 via-green-900 to-black">
-      <div className="mx-auto flex max-w-7xl flex-col items-center gap-10 px-6 py-12 lg:flex-row lg:justify-between lg:px-10 lg:py-20">
-        <div className="max-w-xl text-center lg:text-left">
-          <span className="inline-block rounded-full bg-green-600 px-4 py-2 text-sm font-bold text-white">
-            🚚 Entregas el mismo día
-          </span>
+    <section className="relative min-h-[780px] overflow-hidden bg-black">
+      <img
+        src="/hero-market.jpg"
+        alt="MercaNova GO"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
 
-          <h1 className="mt-6 text-4xl font-black leading-tight text-white sm:text-5xl lg:text-6xl">
-            Tu mercado
+      <div className="absolute inset-0 bg-gradient-to-r from-black via-black/75 to-black/25" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+
+      <div className="relative mx-auto flex min-h-[780px] max-w-7xl items-center px-6 py-20 lg:px-10">
+        <div className="max-w-2xl">
+          <div className="inline-flex items-center rounded-full border border-green-400/40 bg-black/45 px-5 py-2 text-sm font-black uppercase tracking-wide text-green-300 backdrop-blur">
+            MercaNova GO · Riobamba
+          </div>
+
+          <h1 className="mt-8 text-5xl font-black leading-tight tracking-tight text-white sm:text-6xl lg:text-7xl">
+            Tu mercado,
             <br />
-            <span className="text-green-400">fresco directo</span>
+            <span className="text-green-400">más fresco</span>
             <br />
-            a casa.
+            y más rápido.
           </h1>
 
-          <p className="mt-6 text-lg leading-relaxed text-zinc-300">
-            Compra frutas, verduras, lácteos y abarrotes del Mercado Mayorista
-            de Riobamba sin salir de casa.
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-zinc-200">
+            Productos seleccionados, compras inteligentes y entrega directa a
+            tu hogar con una experiencia moderna, ágil y confiable.
           </p>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-4 lg:justify-start">
-            <Button>Comprar ahora</Button>
-
-            <Button variant="secondary">Ver catálogo</Button>
+          <div className="mt-9 flex flex-wrap gap-4">
+            <Link
+              href="#catalogo"
+              className="rounded-2xl bg-green-600 px-8 py-4 text-lg font-black text-white shadow-2xl transition hover:-translate-y-1 hover:bg-green-500"
+            >
+              Comprar ahora
+            </Link>
 
             <Link
               href="/chef"
-              className="rounded-2xl bg-white px-6 py-4 font-black text-green-700 shadow-lg transition hover:-translate-y-1 hover:bg-green-100"
+              className="rounded-2xl bg-white px-8 py-4 text-lg font-black text-green-700 shadow-2xl transition hover:-translate-y-1 hover:bg-green-100"
             >
-              🍲 Chef MercaNova
+              Chef MercaNova
             </Link>
           </div>
 
-          <div className="mt-8 rounded-3xl border border-green-400/30 bg-white/10 p-5 text-left backdrop-blur">
-            <p className="text-sm font-black uppercase tracking-widest text-green-300">
-              ¿No sabes qué cocinar hoy?
-            </p>
-
-            <p className="mt-2 text-lg font-bold text-white">
-              Elige una receta y agrega sus ingredientes a tu canasta en
-              segundos.
-            </p>
-          </div>
-
-          <div className="mt-10 grid grid-cols-3 gap-6">
-            <div>
-              <p className="text-3xl font-black text-green-400">+800</p>
-              <p className="text-sm text-zinc-300">Productos</p>
+          <div className="mt-12 grid max-w-xl grid-cols-3 gap-5">
+            <div className="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur">
+              <p className="text-4xl font-black text-white">+800</p>
+              <p className="mt-1 text-sm font-bold text-zinc-300">Productos</p>
             </div>
 
-            <div>
-              <p className="text-3xl font-black text-green-400">20 min</p>
-              <p className="text-sm text-zinc-300">Entrega promedio</p>
+            <div className="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur">
+              <p className="text-4xl font-black text-white">30 min</p>
+              <p className="mt-1 text-sm font-bold text-zinc-300">Entrega</p>
             </div>
 
-            <div>
-              <p className="text-3xl font-black text-green-400">100%</p>
-              <p className="text-sm text-zinc-300">Frescura garantizada</p>
+            <div className="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur">
+              <p className="text-4xl font-black text-white">100%</p>
+              <p className="mt-1 text-sm font-bold text-zinc-300">Frescura</p>
             </div>
-          </div>
-        </div>
-
-        <div className="w-full max-w-xl">
-          <div className="overflow-hidden rounded-3xl border border-white/10 shadow-2xl">
-            <img
-              src="/hero-market.jpg"
-              alt="MercaNova"
-              className="h-full w-full object-cover transition duration-700 hover:scale-105"
-            />
           </div>
         </div>
       </div>
