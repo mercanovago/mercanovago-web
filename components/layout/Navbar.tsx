@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import {
-  FormEvent,
   useEffect,
   useRef,
   useState,
@@ -11,10 +10,13 @@ import {
 import { useCart } from "../../context/CartContext";
 import CartDrawer from "../cart/CartDrawer";
 import BrandLogo from "./BrandLogo";
+import NavbarSearchBox from "./navbar/NavbarSearchBox";
+import type { Product } from "@/types/product";
 
 interface NavbarProps {
   searchQuery: string;
   setSearchQuery: (value: string) => void;
+  products: Product[];
 }
 
 type NavigationItem = {
@@ -67,6 +69,7 @@ const sectionIds = [
 export default function Navbar({
   searchQuery,
   setSearchQuery,
+  products,
 }: NavbarProps) {
   const [cartOpen, setCartOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] =
@@ -165,11 +168,7 @@ export default function Navbar({
     };
   }, []);
 
-  function handleSearch(
-    event: FormEvent<HTMLFormElement>
-  ) {
-    event.preventDefault();
-
+  function handleSearch() {
     const catalogSection =
       document.getElementById("catalogo");
 
@@ -347,55 +346,13 @@ export default function Navbar({
                 </div>
               </div>
 
-              <form
-                onSubmit={handleSearch}
-                className="hidden min-w-0 flex-1 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 shadow-sm transition focus-within:border-green-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-green-100 lg:flex 2xl:max-w-[330px]"
-              >
-                <label
-                  htmlFor="navbar-search"
-                  className="sr-only"
-                >
-                  Buscar productos
-                </label>
-
-                <div className="flex min-w-0 flex-1 items-center">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="ml-4 h-5 w-5 shrink-0 text-zinc-400"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    aria-hidden="true"
-                  >
-                    <circle
-                      cx="11"
-                      cy="11"
-                      r="7"
-                    />
-                    <path d="m20 20-4-4" />
-                  </svg>
-
-                  <input
-                    id="navbar-search"
-                    type="search"
-                    value={searchQuery}
-                    onChange={(event) =>
-                      setSearchQuery(
-                        event.target.value
-                      )
-                    }
-                    placeholder="Busca frutas, verduras, lácteos..."
-                    className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm font-semibold text-zinc-950 outline-none placeholder:font-medium placeholder:text-zinc-400"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="shrink-0 bg-green-600 px-4 text-sm font-black text-white transition hover:bg-green-700 xl:px-5"
-                >
-                  Buscar
-                </button>
-              </form>
+              <NavbarSearchBox
+                id="navbar-search"
+                products={products}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                onSearch={handleSearch}
+              />
 
               <Link
                 href="/chef"
@@ -524,55 +481,14 @@ export default function Navbar({
               </div>
             </div>
 
-            <form
-              onSubmit={handleSearch}
-              className="mb-3 flex overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 shadow-sm transition focus-within:border-green-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-green-100 lg:hidden"
-            >
-              <label
-                htmlFor="mobile-navbar-search"
-                className="sr-only"
-              >
-                Buscar productos
-              </label>
-
-              <div className="flex min-w-0 flex-1 items-center">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="ml-4 h-5 w-5 shrink-0 text-zinc-400"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  aria-hidden="true"
-                >
-                  <circle
-                    cx="11"
-                    cy="11"
-                    r="7"
-                  />
-                  <path d="m20 20-4-4" />
-                </svg>
-
-                <input
-                  id="mobile-navbar-search"
-                  type="search"
-                  value={searchQuery}
-                  onChange={(event) =>
-                    setSearchQuery(
-                      event.target.value
-                    )
-                  }
-                  placeholder="Buscar productos"
-                  className="min-w-0 flex-1 bg-transparent px-3 py-3.5 text-sm font-semibold text-zinc-950 outline-none placeholder:text-zinc-400"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="shrink-0 bg-green-600 px-5 text-sm font-black text-white transition hover:bg-green-700"
-              >
-                Buscar
-              </button>
-            </form>
+            <NavbarSearchBox
+              id="mobile-navbar-search"
+              products={products}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSearch={handleSearch}
+              mobile
+            />
 
             <div
               ref={menuRef}

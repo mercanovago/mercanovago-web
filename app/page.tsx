@@ -63,6 +63,7 @@ export default function Home() {
       <Navbar
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
+        products={products}
       />
 
       <Hero />

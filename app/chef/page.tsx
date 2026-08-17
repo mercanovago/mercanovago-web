@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { CartProvider } from "@/components/cart/CartContext";
+import ChefAssistant from "@/components/chef/ChefAssistant";
 import ChefSearch from "@/components/chef/ChefSearch";
 import BrandLogo from "@/components/layout/BrandLogo";
 
@@ -10,7 +11,7 @@ const chefBenefits = [
   {
     title: "Ideas para cocinar",
     description:
-      "Recibe sugerencias según el plato, ocasión o ingredientes que tengas disponibles.",
+      "Recibe sugerencias según el plato, ocasión, presupuesto o ingredientes que tengas disponibles.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -149,6 +150,7 @@ export default function ChefPage() {
                 stroke="white"
                 strokeWidth="2"
               />
+
               <path
                 d="M0 370C170 270 340 390 520 275C690 165 820 280 965 145C1065 55 1140 80 1200 110"
                 stroke="white"
@@ -260,6 +262,7 @@ export default function ChefPage() {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
+
                         <path
                           d="M9 15.25h6M9 18h6"
                           stroke="currentColor"
@@ -348,53 +351,87 @@ export default function ChefPage() {
             ))}
           </div>
 
-          <div className="mt-10 overflow-hidden rounded-[2rem] border border-zinc-200 bg-white shadow-[0_30px_80px_-45px_rgba(15,23,42,0.35)]">
+          <div className="mt-10">
+            <ChefAssistant />
+          </div>
+
+          <div className="relative my-14 sm:my-16">
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 flex items-center"
+            >
+              <div className="w-full border-t border-zinc-300" />
+            </div>
+
+            <div className="relative flex justify-center">
+              <div className="rounded-full border border-zinc-200 bg-[#f4f7f4] px-5 py-2.5 text-center">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                  Explorar recetas disponibles
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <section
+            aria-labelledby="classic-chef-title"
+            className="overflow-hidden rounded-[2rem] border border-zinc-200 bg-white shadow-[0_30px_80px_-45px_rgba(15,23,42,0.35)]"
+          >
             <div className="border-b border-zinc-200 bg-zinc-50 px-5 py-5 sm:px-8">
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-950 text-white">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                    className="h-6 w-6"
-                  >
-                    <path
-                      d="M7.75 18.25 4 20l1-4.1A8 8 0 1 1 7.75 18.25Z"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M8.5 9.25h7M8.5 12.5h5"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                    />
-                  </svg>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-950 text-white">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                      className="h-6 w-6"
+                    >
+                      <path
+                        d="M6.25 5.25h11.5v13.5H6.25z"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        strokeLinejoin="round"
+                      />
+
+                      <path
+                        d="M9 8.5h6M9 12h6M9 15.5h3.5"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-green-600">
+                      Experiencia clásica
+                    </p>
+
+                    <h2
+                      id="classic-chef-title"
+                      className="mt-1 text-xl font-black text-zinc-950 sm:text-2xl"
+                    >
+                      Selecciona una receta disponible
+                    </h2>
+
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
+                      Explora las recetas de demostración y agrega sus
+                      ingredientes directamente a tu canasta.
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-green-600">
-                    Comienza tu consulta
-                  </p>
-
-                  <h2 className="mt-1 text-xl font-black text-zinc-950 sm:text-2xl">
-                    ¿Qué deseas preparar hoy?
-                  </h2>
-
-                  <p className="mt-2 text-sm leading-6 text-zinc-500">
-                    Describe el plato, número de personas, presupuesto o
-                    ingredientes disponibles.
-                  </p>
-                </div>
+                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">
+                  <span className="h-2 w-2 rounded-full bg-green-500" />
+                  Modo exploración
+                </span>
               </div>
             </div>
 
             <div className="p-5 sm:p-8">
               <ChefSearch />
             </div>
-          </div>
+          </section>
         </section>
 
         <footer className="border-t border-zinc-200 bg-white">
