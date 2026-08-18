@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { getAdminSession } from "@/services/adminLogin";
 
 export const ORDER_STATUSES = [
   "Pendiente",
@@ -9,7 +9,8 @@ export const ORDER_STATUSES = [
   "Cancelado",
 ] as const;
 
-export type OrderStatus = (typeof ORDER_STATUSES)[number];
+export type OrderStatus =
+  (typeof ORDER_STATUSES)[number];
 
 export const DELIVERY_TYPES = [
   "express",
@@ -81,9 +82,18 @@ export interface AdminOrder {
 
 interface RawOrder {
   id: number;
-  subtotal: number | string | null;
-  delivery: number | string | null;
-  total: number | string | null;
+  subtotal:
+    | number
+    | string
+    | null;
+  delivery:
+    | number
+    | string
+    | null;
+  total:
+    | number
+    | string
+    | null;
   payment_method: string | null;
   status: string | null;
   created_at: string;
@@ -104,9 +114,18 @@ interface RawOrder {
   order_items:
     | Array<{
         id: number;
-        quantity: number | string | null;
-        unit_price: number | string | null;
-        subtotal: number | string | null;
+        quantity:
+          | number
+          | string
+          | null;
+        unit_price:
+          | number
+          | string
+          | null;
+        subtotal:
+          | number
+          | string
+          | null;
 
         products:
           | AdminOrderProduct
@@ -116,16 +135,34 @@ interface RawOrder {
     | null;
 }
 
-function toNumber(
-  value: number | string | null | undefined
-): number {
-  const converted = Number(value ?? 0);
+interface AdminOrdersResponse {
+  ok: boolean;
+  data?: RawOrder[];
+  error?: string;
+}
 
-  return Number.isFinite(converted) ? converted : 0;
+function toNumber(
+  value:
+    | number
+    | string
+    | null
+    | undefined
+): number {
+  const converted = Number(
+    value ?? 0
+  );
+
+  return Number.isFinite(converted)
+    ? converted
+    : 0;
 }
 
 function firstRelation<T>(
-  value: T | T[] | null | undefined
+  value:
+    | T
+    | T[]
+    | null
+    | undefined
 ): T | null {
   if (Array.isArray(value)) {
     return value[0] ?? null;
@@ -134,18 +171,27 @@ function firstRelation<T>(
   return value ?? null;
 }
 
-function normalizeText(value: string): string {
+function normalizeText(
+  value: string
+): string {
   return value
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    );
 }
 
 export function normalizeOrderStatus(
-  status: string | null | undefined
+  status:
+    | string
+    | null
+    | undefined
 ): OrderStatus {
-  const cleanStatus = normalizeText(status ?? "");
+  const cleanStatus =
+    normalizeText(status ?? "");
 
   if (
     cleanStatus.includes("cancel") ||
@@ -188,9 +234,15 @@ export function normalizeOrderStatus(
 }
 
 export function normalizeDeliveryType(
-  deliveryType: string | null | undefined
+  deliveryType:
+    | string
+    | null
+    | undefined
 ): AdminDeliveryType {
-  const cleanType = normalizeText(deliveryType ?? "");
+  const cleanType =
+    normalizeText(
+      deliveryType ?? ""
+    );
 
   if (
     cleanType === "scheduled" ||
@@ -210,10 +262,16 @@ export function normalizeDeliveryType(
 }
 
 export function normalizeDeliveryStatus(
-  deliveryStatus: string | null | undefined,
+  deliveryStatus:
+    | string
+    | null
+    | undefined,
   deliveryType: AdminDeliveryType
 ): AdminDeliveryStatus {
-  const cleanStatus = normalizeText(deliveryStatus ?? "");
+  const cleanStatus =
+    normalizeText(
+      deliveryStatus ?? ""
+    );
 
   if (
     cleanStatus.includes("cancel") ||
@@ -266,67 +324,108 @@ export function normalizeDeliveryStatus(
 
   if (
     cleanStatus.includes("coordinar") ||
-    cleanStatus.includes("por coordinar")
+    cleanStatus.includes(
+      "por coordinar"
+    )
   ) {
     return "Por coordinar";
   }
 
-  if (deliveryType === "scheduled") {
+  if (
+    deliveryType === "scheduled"
+  ) {
     return "Programada";
   }
 
-  if (deliveryType === "coordinated") {
+  if (
+    deliveryType === "coordinated"
+  ) {
     return "Por coordinar";
   }
 
   return "Pendiente";
 }
 
-function mapOrder(rawOrder: RawOrder): AdminOrder {
-  const customer = firstRelation(rawOrder.customers);
+function mapOrder(
+  rawOrder: RawOrder
+): AdminOrder {
+  const customer =
+    firstRelation(
+      rawOrder.customers
+    );
 
-  const deliveryType = normalizeDeliveryType(
-    rawOrder.delivery_type
-  );
+  const deliveryType =
+    normalizeDeliveryType(
+      rawOrder.delivery_type
+    );
 
-  const items: AdminOrderItem[] = (
-    rawOrder.order_items ?? []
-  ).map((item) => {
-    const quantity = toNumber(item.quantity);
-    const unitPrice = toNumber(item.unit_price);
-    const storedSubtotal = toNumber(item.subtotal);
+  const items: AdminOrderItem[] =
+    (
+      rawOrder.order_items ?? []
+    ).map((item) => {
+      const quantity =
+        toNumber(item.quantity);
 
-    return {
-      id: item.id,
-      quantity,
-      unit_price: unitPrice,
-      subtotal:
-        storedSubtotal || quantity * unitPrice,
-      products: firstRelation(item.products),
-    };
-  });
+      const unitPrice =
+        toNumber(item.unit_price);
+
+      const storedSubtotal =
+        toNumber(item.subtotal);
+
+      return {
+        id: item.id,
+        quantity,
+        unit_price: unitPrice,
+        subtotal:
+          storedSubtotal ||
+          quantity * unitPrice,
+        products:
+          firstRelation(
+            item.products
+          ),
+      };
+    });
 
   return {
     id: rawOrder.id,
-    subtotal: toNumber(rawOrder.subtotal),
-    delivery: toNumber(rawOrder.delivery),
-    total: toNumber(rawOrder.total),
-    payment_method: rawOrder.payment_method,
-    status: normalizeOrderStatus(rawOrder.status),
-    created_at: rawOrder.created_at,
+    subtotal:
+      toNumber(
+        rawOrder.subtotal
+      ),
+    delivery:
+      toNumber(
+        rawOrder.delivery
+      ),
+    total:
+      toNumber(rawOrder.total),
+    payment_method:
+      rawOrder.payment_method,
+    status:
+      normalizeOrderStatus(
+        rawOrder.status
+      ),
+    created_at:
+      rawOrder.created_at,
 
-    delivery_type: deliveryType,
-    delivery_date: rawOrder.delivery_date,
-    delivery_time: rawOrder.delivery_time,
-    delivery_window: rawOrder.delivery_window,
-    estimated_delivery: rawOrder.estimated_delivery,
+    delivery_type:
+      deliveryType,
+    delivery_date:
+      rawOrder.delivery_date,
+    delivery_time:
+      rawOrder.delivery_time,
+    delivery_window:
+      rawOrder.delivery_window,
+    estimated_delivery:
+      rawOrder.estimated_delivery,
     delivery_notes:
-      rawOrder.delivery_notes?.trim() || null,
+      rawOrder.delivery_notes
+        ?.trim() || null,
 
-    delivery_status: normalizeDeliveryStatus(
-      rawOrder.delivery_status,
-      deliveryType
-    ),
+    delivery_status:
+      normalizeDeliveryStatus(
+        rawOrder.delivery_status,
+        deliveryType
+      ),
 
     customers: customer,
     order_items: items,
@@ -336,62 +435,57 @@ function mapOrder(rawOrder: RawOrder): AdminOrder {
 export async function getAdminOrders(): Promise<
   AdminOrder[]
 > {
-  const { data, error } = await supabase
-    .from("orders")
-    .select(`
-      id,
-      subtotal,
-      delivery,
-      total,
-      payment_method,
-      status,
-      created_at,
-      delivery_type,
-      delivery_date,
-      delivery_time,
-      delivery_window,
-      estimated_delivery,
-      delivery_notes,
-      delivery_status,
-      customers (
-        first_name,
-        last_name,
-        phone,
-        email,
-        address
-      ),
-      order_items (
-        id,
-        quantity,
-        unit_price,
-        subtotal,
-        products (
-          id,
-          name,
-          image,
-          unit
-        )
-      )
-    `)
-    .order("created_at", {
-      ascending: false,
-    });
+  try {
+    const session =
+      await getAdminSession();
 
-  if (error) {
+    if (!session?.accessToken) {
+      throw new Error(
+        "No existe una sesión administrativa válida para cargar pedidos."
+      );
+    }
+
+    const response = await fetch(
+      "/api/admin/orders",
+      {
+        method: "GET",
+        cache: "no-store",
+        headers: {
+          Accept:
+            "application/json",
+          Authorization:
+            `Bearer ${session.accessToken}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `HTTP ${response.status} ${response.statusText}`
+      );
+    }
+
+    const result =
+      (await response.json()) as AdminOrdersResponse;
+
+    if (!result.ok) {
+      throw new Error(
+        result.error ??
+          "No fue posible cargar los pedidos."
+      );
+    }
+
+    return (
+      result.data ?? []
+    ).map(mapOrder);
+  } catch (error) {
     console.error(
       "Error cargando pedidos administrativos:",
-      {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      }
+      error
     );
 
     throw new Error(
       "No fue posible cargar los pedidos de MercaNova GO."
     );
   }
-
-  return ((data ?? []) as RawOrder[]).map(mapOrder);
 }
