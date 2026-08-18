@@ -1,19 +1,26 @@
-import { supabase } from "@/lib/supabase";
-
 import {
   ORDER_STATUSES,
   type OrderStatus,
 } from "@/services/adminOrders";
+import { getAdminSession } from "@/services/adminLogin";
 
 export interface UpdatedOrderStatus {
   id: number;
   status: OrderStatus;
 }
 
+interface UpdateOrderStatusResponse {
+  ok: boolean;
+  data?: UpdatedOrderStatus;
+  error?: string;
+}
+
 function isValidOrderStatus(
   status: string
 ): status is OrderStatus {
-  return ORDER_STATUSES.includes(status as OrderStatus);
+  return ORDER_STATUSES.includes(
+    status as OrderStatus
+  );
 }
 
 export async function updateOrderStatus(
@@ -32,34 +39,61 @@ export async function updateOrderStatus(
     );
   }
 
-  const { data, error } = await supabase
-    .from("orders")
-    .update({
-      status,
-    })
-    .eq("id", id)
-    .select("id,status")
-    .single();
+  const session = await getAdminSession();
 
-  if (error) {
+  if (!session?.accessToken) {
+    throw new Error(
+      "No existe una sesión administrativa válida."
+    );
+  }
+
+  const response = await fetch(
+    "/api/admin/orders",
+    {
+      method: "PATCH",
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization:
+          `Bearer ${session.accessToken}`,
+      },
+      body: JSON.stringify({
+        id,
+        status,
+      }),
+    }
+  );
+
+  let result: UpdateOrderStatusResponse;
+
+  try {
+    result =
+      (await response.json()) as UpdateOrderStatusResponse;
+  } catch {
+    throw new Error(
+      "La respuesta del servidor no es válida."
+    );
+  }
+
+  if (!response.ok || !result.ok) {
     console.error(
       "Error actualizando estado del pedido:",
-      error
+      result.error ??
+        `HTTP ${response.status}`
     );
 
     throw new Error(
-      "No fue posible actualizar el estado del pedido."
+      result.error ??
+        "No fue posible actualizar el estado del pedido."
     );
   }
 
-  if (!data) {
+  if (!result.data) {
     throw new Error(
-      "Supabase no devolvió el pedido actualizado."
+      "El servidor no devolvió el pedido actualizado."
     );
   }
 
-  return {
-    id: Number(data.id),
-    status: data.status as OrderStatus,
-  };
+  return result.data;
 }
