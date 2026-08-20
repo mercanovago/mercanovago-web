@@ -92,6 +92,48 @@ function isValidDeliveryStatus(
   );
 }
 
+function isValidDateValue(
+  value: unknown
+): value is string {
+  if (typeof value !== "string" || !value) {
+    return false;
+  }
+
+  const date = new Date(
+    `${value}T00:00:00`
+  );
+
+  return !Number.isNaN(date.getTime());
+}
+
+function isValidTimeValue(
+  value: unknown
+): value is string {
+  return (
+    typeof value === "string" &&
+    /^([01]\d|2[0-3]):([0-5]\d)$/.test(
+      value
+    )
+  );
+}
+
+function createEstimatedDelivery(
+  deliveryDate: string,
+  deliveryTime: string
+): string {
+  const date = new Date(
+    `${deliveryDate}T${deliveryTime}:00`
+  );
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(
+      "La fecha y la hora seleccionadas no son válidas."
+    );
+  }
+
+  return date.toISOString();
+}
+
 async function authorizeAdmin(
   request: NextRequest
 ): Promise<
@@ -383,6 +425,7 @@ export async function PATCH(
       id?: unknown;
       status?: unknown;
       delivery_status?: unknown;
+      delivery_schedule?: unknown;
     };
 
     const id = Number(payload.id);
@@ -401,26 +444,24 @@ export async function PATCH(
       );
     }
 
-    const hasOrderStatus =
-      payload.status !== undefined;
+    const operations = [
+      payload.status !== undefined,
+      payload.delivery_status !== undefined,
+      payload.delivery_schedule !== undefined,
+    ].filter(Boolean).length;
 
-    const hasDeliveryStatus =
-      payload.delivery_status !== undefined;
-
-    if (
-      hasOrderStatus === hasDeliveryStatus
-    ) {
+    if (operations !== 1) {
       return NextResponse.json(
         {
           ok: false,
           error:
-            "Debe enviarse exactamente un estado para actualizar.",
+            "Debe enviarse exactamente una operación para actualizar.",
         },
         { status: 400 }
       );
     }
 
-    if (hasOrderStatus) {
+    if (payload.status !== undefined) {
       if (
         !isValidOrderStatus(
           payload.status
@@ -494,22 +535,203 @@ export async function PATCH(
     }
 
     if (
-      !isValidDeliveryStatus(
-        payload.delivery_status
+      payload.delivery_status !==
+      undefined
+    ) {
+      if (
+        !isValidDeliveryStatus(
+          payload.delivery_status
+        )
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "El estado logístico seleccionado no es válido.",
+          },
+          { status: 400 }
+        );
+      }
+
+      const deliveryStatus =
+        payload.delivery_status;
+
+      const {
+        data,
+        error,
+      } = await supabaseAdmin
+        .from("orders")
+        .update({
+          delivery_status:
+            deliveryStatus,
+        })
+        .eq("id", id)
+        .select(
+          "id,delivery_status"
+        )
+        .maybeSingle();
+
+      if (error) {
+        console.error(
+          "Error actualizando estado logístico:",
+          {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+            orderId: id,
+          }
+        );
+
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "No fue posible actualizar el estado logístico del pedido.",
+          },
+          { status: 500 }
+        );
+      }
+
+      if (!data) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "El pedido solicitado no existe.",
+          },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        ok: true,
+        data: {
+          id: Number(data.id),
+          delivery_status:
+            data.delivery_status as DeliveryStatus,
+        },
+      });
+    }
+
+    if (
+      typeof payload.delivery_schedule !==
+        "object" ||
+      payload.delivery_schedule === null
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Los datos de programación de entrega no son válidos.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const schedule =
+      payload.delivery_schedule as {
+        delivery_date?: unknown;
+        delivery_time?: unknown;
+        delivery_window?: unknown;
+        delivery_notes?: unknown;
+      };
+
+    if (
+      !isValidDateValue(
+        schedule.delivery_date
       )
     ) {
       return NextResponse.json(
         {
           ok: false,
           error:
-            "El estado logístico seleccionado no es válido.",
+            "La fecha seleccionada no es válida.",
         },
         { status: 400 }
       );
     }
 
-    const deliveryStatus =
-      payload.delivery_status;
+    if (
+      !isValidTimeValue(
+        schedule.delivery_time
+      )
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "La hora seleccionada no es válida.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      typeof schedule.delivery_window !==
+        "string" ||
+      !schedule.delivery_window.trim()
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "El intervalo de entrega es obligatorio.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      schedule.delivery_notes !== undefined &&
+      schedule.delivery_notes !== null &&
+      typeof schedule.delivery_notes !==
+        "string"
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Las observaciones de entrega no son válidas.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const scheduledDateTime =
+      new Date(
+        `${schedule.delivery_date}T${schedule.delivery_time}:00`
+      );
+
+    if (
+      Number.isNaN(
+        scheduledDateTime.getTime()
+      ) ||
+      scheduledDateTime.getTime() <=
+        Date.now()
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "No es posible confirmar una fecha u hora vencida.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const estimatedDelivery =
+      createEstimatedDelivery(
+        schedule.delivery_date,
+        schedule.delivery_time
+      );
+
+    const deliveryNotes =
+      typeof schedule.delivery_notes ===
+      "string"
+        ? schedule.delivery_notes.trim() ||
+          null
+        : null;
 
     const {
       data,
@@ -517,16 +739,34 @@ export async function PATCH(
     } = await supabaseAdmin
       .from("orders")
       .update({
+        delivery_date:
+          schedule.delivery_date,
+        delivery_time:
+          schedule.delivery_time,
+        delivery_window:
+          schedule.delivery_window.trim(),
+        estimated_delivery:
+          estimatedDelivery,
+        delivery_notes:
+          deliveryNotes,
         delivery_status:
-          deliveryStatus,
+          "Confirmada",
       })
       .eq("id", id)
-      .select("id,delivery_status")
+      .select(`
+        id,
+        delivery_date,
+        delivery_time,
+        delivery_window,
+        estimated_delivery,
+        delivery_notes,
+        delivery_status
+      `)
       .maybeSingle();
 
     if (error) {
       console.error(
-        "Error actualizando estado logístico:",
+        "Error confirmando programación de entrega:",
         {
           message: error.message,
           details: error.details,
@@ -540,7 +780,7 @@ export async function PATCH(
         {
           ok: false,
           error:
-            "No fue posible actualizar el estado logístico del pedido.",
+            "No fue posible confirmar la fecha y hora de entrega.",
         },
         { status: 500 }
       );
@@ -561,8 +801,25 @@ export async function PATCH(
       ok: true,
       data: {
         id: Number(data.id),
+        delivery_date:
+          String(data.delivery_date),
+        delivery_time:
+          String(data.delivery_time),
+        delivery_window:
+          String(
+            data.delivery_window
+          ),
+        estimated_delivery:
+          String(
+            data.estimated_delivery
+          ),
+        delivery_notes:
+          typeof data.delivery_notes ===
+          "string"
+            ? data.delivery_notes
+            : null,
         delivery_status:
-          data.delivery_status as DeliveryStatus,
+          "Confirmada" as const,
       },
     });
   } catch (error) {

@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { getAdminSession } from "@/services/adminLogin";
 
 export interface DeliveryScheduleData {
   orderId: number;
@@ -18,6 +18,12 @@ export interface UpdatedDeliverySchedule {
   delivery_status: "Confirmada";
 }
 
+interface UpdateDeliveryScheduleResponse {
+  ok: boolean;
+  data?: UpdatedDeliverySchedule;
+  error?: string;
+}
+
 function validateDateValue(value: string): boolean {
   if (!value) {
     return false;
@@ -30,23 +36,6 @@ function validateDateValue(value: string): boolean {
 
 function validateTimeValue(value: string): boolean {
   return /^([01]\d|2[0-3]):([0-5]\d)$/.test(value);
-}
-
-function createEstimatedDelivery(
-  deliveryDate: string,
-  deliveryTime: string
-): string {
-  const date = new Date(
-    `${deliveryDate}T${deliveryTime}:00`
-  );
-
-  if (Number.isNaN(date.getTime())) {
-    throw new Error(
-      "La fecha y la hora seleccionadas no son válidas."
-    );
-  }
-
-  return date.toISOString();
 }
 
 export async function updateDeliverySchedule(
@@ -83,74 +72,81 @@ export async function updateDeliverySchedule(
     `${schedule.deliveryDate}T${schedule.deliveryTime}:00`
   );
 
-  if (scheduledDateTime.getTime() <= Date.now()) {
+  if (
+    Number.isNaN(scheduledDateTime.getTime()) ||
+    scheduledDateTime.getTime() <= Date.now()
+  ) {
     throw new Error(
       "No es posible confirmar una fecha u hora vencida."
     );
   }
 
-  const estimatedDelivery = createEstimatedDelivery(
-    schedule.deliveryDate,
-    schedule.deliveryTime
+  const session = await getAdminSession();
+
+  if (!session?.accessToken) {
+    throw new Error(
+      "No existe una sesión administrativa válida."
+    );
+  }
+
+  const response = await fetch(
+    "/api/admin/orders",
+    {
+      method: "PATCH",
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization:
+          `Bearer ${session.accessToken}`,
+      },
+      body: JSON.stringify({
+        id: schedule.orderId,
+        delivery_schedule: {
+          delivery_date:
+            schedule.deliveryDate,
+          delivery_time:
+            schedule.deliveryTime,
+          delivery_window:
+            schedule.deliveryWindow.trim(),
+          delivery_notes:
+            schedule.deliveryNotes?.trim() ||
+            null,
+        },
+      }),
+    }
   );
 
-  const { data, error } = await supabase
-    .from("orders")
-    .update({
-      delivery_date: schedule.deliveryDate,
-      delivery_time: schedule.deliveryTime,
-      delivery_window: schedule.deliveryWindow,
-      estimated_delivery: estimatedDelivery,
-      delivery_notes:
-        schedule.deliveryNotes?.trim() || null,
-      delivery_status: "Confirmada",
-    })
-    .eq("id", schedule.orderId)
-    .select(`
-      id,
-      delivery_date,
-      delivery_time,
-      delivery_window,
-      estimated_delivery,
-      delivery_notes,
-      delivery_status
-    `)
-    .single();
+  let result: UpdateDeliveryScheduleResponse;
 
-  if (error) {
+  try {
+    result =
+      (await response.json()) as
+        UpdateDeliveryScheduleResponse;
+  } catch {
+    throw new Error(
+      "La respuesta del servidor no es válida."
+    );
+  }
+
+  if (!response.ok || !result.ok) {
     console.error(
       "Error confirmando programación de entrega:",
-      {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      }
+      result.error ??
+        `HTTP ${response.status}`
     );
 
     throw new Error(
-      "No fue posible confirmar la fecha y hora de entrega."
+      result.error ??
+        "No fue posible confirmar la fecha y hora de entrega."
     );
   }
 
-  if (!data) {
+  if (!result.data) {
     throw new Error(
-      "Supabase no devolvió la entrega actualizada."
+      "El servidor no devolvió la entrega actualizada."
     );
   }
 
-  return {
-    id: Number(data.id),
-    delivery_date: String(data.delivery_date),
-    delivery_time: String(data.delivery_time),
-    delivery_window: String(data.delivery_window),
-    estimated_delivery: String(
-      data.estimated_delivery
-    ),
-    delivery_notes:
-      typeof data.delivery_notes === "string"
-        ? data.delivery_notes
-        : null,
-    delivery_status: "Confirmada",
-  };
+  return result.data;
 }
