@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { getAdminSession } from "@/services/adminLogin";
 
 export const DRIVER_STATUSES = [
   "Disponible",
@@ -90,8 +90,16 @@ interface RawDeliveryDriver {
   status: string | null;
   active: boolean | null;
 
-  current_latitude: number | string | null;
-  current_longitude: number | string | null;
+  current_latitude:
+    | number
+    | string
+    | null;
+
+  current_longitude:
+    | number
+    | string
+    | null;
+
   last_location_at: string | null;
 
   notes: string | null;
@@ -100,10 +108,17 @@ interface RawDeliveryDriver {
   updated_at: string;
 }
 
+interface DeliveryDriverApiResponse {
+  ok: boolean;
+  data?: unknown;
+  error?: string;
+}
+
 function cleanOptionalText(
   value: string | null | undefined
 ): string | null {
-  const cleanValue = value?.trim() ?? "";
+  const cleanValue =
+    value?.trim() ?? "";
 
   return cleanValue || null;
 }
@@ -112,7 +127,8 @@ function cleanRequiredText(
   value: string,
   fieldName: string
 ): string {
-  const cleanValue = value.trim();
+  const cleanValue =
+    value.trim();
 
   if (!cleanValue) {
     throw new Error(
@@ -124,7 +140,11 @@ function cleanRequiredText(
 }
 
 function toNullableNumber(
-  value: number | string | null | undefined
+  value:
+    | number
+    | string
+    | null
+    | undefined
 ): number | null {
   if (
     value === null ||
@@ -134,25 +154,32 @@ function toNullableNumber(
     return null;
   }
 
-  const converted = Number(value);
+  const converted =
+    Number(value);
 
   return Number.isFinite(converted)
     ? converted
     : null;
 }
 
-function normalizeText(value: string): string {
+function normalizeText(
+  value: string
+): string {
   return value
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    );
 }
 
 function normalizeDriverStatus(
   value: string | null | undefined
 ): DriverStatus {
-  const normalized = normalizeText(value ?? "");
+  const normalized =
+    normalizeText(value ?? "");
 
   if (
     normalized.includes("ocupado") ||
@@ -168,7 +195,9 @@ function normalizeDriverStatus(
     return "Fuera de servicio";
   }
 
-  if (normalized.includes("inactiv")) {
+  if (
+    normalized.includes("inactiv")
+  ) {
     return "Inactivo";
   }
 
@@ -178,9 +207,12 @@ function normalizeDriverStatus(
 function normalizeVehicleType(
   value: string | null | undefined
 ): DriverVehicleType {
-  const normalized = normalizeText(value ?? "");
+  const normalized =
+    normalizeText(value ?? "");
 
-  if (normalized.includes("bicicleta")) {
+  if (
+    normalized.includes("bicicleta")
+  ) {
     return "Bicicleta";
   }
 
@@ -191,7 +223,9 @@ function normalizeVehicleType(
     return "Automóvil";
   }
 
-  if (normalized.includes("camioneta")) {
+  if (
+    normalized.includes("camioneta")
+  ) {
     return "Camioneta";
   }
 
@@ -202,15 +236,20 @@ function normalizeVehicleType(
     return "A pie";
   }
 
-  if (normalized.includes("otro")) {
+  if (
+    normalized.includes("otro")
+  ) {
     return "Otro";
   }
 
   return "Moto";
 }
 
-function validatePhone(phone: string): string {
-  const cleanPhone = phone.trim();
+function validatePhone(
+  phone: string
+): string {
+  const cleanPhone =
+    phone.trim();
 
   if (!cleanPhone) {
     throw new Error(
@@ -218,12 +257,17 @@ function validatePhone(phone: string): string {
     );
   }
 
-  const normalizedPhone = cleanPhone.replace(
-    /[\s()-]/g,
-    ""
-  );
+  const normalizedPhone =
+    cleanPhone.replace(
+      /[\s()-]/g,
+      ""
+    );
 
-  if (!/^\+?\d{7,15}$/.test(normalizedPhone)) {
+  if (
+    !/^\+?\d{7,15}$/.test(
+      normalizedPhone
+    )
+  ) {
     throw new Error(
       "El número de celular del repartidor no es válido."
     );
@@ -240,7 +284,9 @@ function validateEmail(
   }
 
   if (
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+      email
+    )
   ) {
     throw new Error(
       "El correo electrónico del repartidor no es válido."
@@ -253,7 +299,11 @@ function validateEmail(
 function validateDriverStatus(
   status: DriverStatus
 ): DriverStatus {
-  if (!DRIVER_STATUSES.includes(status)) {
+  if (
+    !DRIVER_STATUSES.includes(
+      status
+    )
+  ) {
     throw new Error(
       "El estado del repartidor no es válido."
     );
@@ -266,7 +316,9 @@ function validateVehicleType(
   vehicleType: DriverVehicleType
 ): DriverVehicleType {
   if (
-    !DRIVER_VEHICLE_TYPES.includes(vehicleType)
+    !DRIVER_VEHICLE_TYPES.includes(
+      vehicleType
+    )
   ) {
     throw new Error(
       "El tipo de vehículo seleccionado no es válido."
@@ -282,83 +334,126 @@ function normalizeDriver(
   return {
     id: Number(driver.id),
 
-    first_name: driver.first_name?.trim() ?? "",
-    last_name: driver.last_name?.trim() ?? "",
+    first_name:
+      driver.first_name?.trim() ??
+      "",
+
+    last_name:
+      driver.last_name?.trim() ??
+      "",
 
     identification:
-      cleanOptionalText(driver.identification),
+      cleanOptionalText(
+        driver.identification
+      ),
 
-    phone: driver.phone?.trim() ?? "",
+    phone:
+      driver.phone?.trim() ?? "",
 
-    email: cleanOptionalText(driver.email),
+    email:
+      cleanOptionalText(
+        driver.email
+      ),
 
-    vehicle_type: normalizeVehicleType(
-      driver.vehicle_type
-    ),
+    vehicle_type:
+      normalizeVehicleType(
+        driver.vehicle_type
+      ),
 
     vehicle_brand:
-      cleanOptionalText(driver.vehicle_brand),
+      cleanOptionalText(
+        driver.vehicle_brand
+      ),
 
     vehicle_model:
-      cleanOptionalText(driver.vehicle_model),
+      cleanOptionalText(
+        driver.vehicle_model
+      ),
 
     vehicle_color:
-      cleanOptionalText(driver.vehicle_color),
+      cleanOptionalText(
+        driver.vehicle_color
+      ),
 
     vehicle_plate:
       cleanOptionalText(
         driver.vehicle_plate
       )?.toUpperCase() ?? null,
 
-    status: normalizeDriverStatus(driver.status),
+    status:
+      normalizeDriverStatus(
+        driver.status
+      ),
 
-    active: driver.active !== false,
+    active:
+      driver.active !== false,
 
-    current_latitude: toNullableNumber(
-      driver.current_latitude
-    ),
+    current_latitude:
+      toNullableNumber(
+        driver.current_latitude
+      ),
 
-    current_longitude: toNullableNumber(
-      driver.current_longitude
-    ),
+    current_longitude:
+      toNullableNumber(
+        driver.current_longitude
+      ),
 
-    last_location_at: driver.last_location_at,
+    last_location_at:
+      driver.last_location_at,
 
-    notes: cleanOptionalText(driver.notes),
+    notes:
+      cleanOptionalText(
+        driver.notes
+      ),
 
-    created_at: driver.created_at,
-    updated_at: driver.updated_at,
+    created_at:
+      driver.created_at,
+
+    updated_at:
+      driver.updated_at,
   };
 }
 
 function prepareDriverPayload(
   driver: DeliveryDriverFormData
 ) {
-  const firstName = cleanRequiredText(
-    driver.first_name,
-    "nombres"
-  );
+  const firstName =
+    cleanRequiredText(
+      driver.first_name,
+      "nombres"
+    );
 
-  const lastName = cleanRequiredText(
-    driver.last_name,
-    "apellidos"
-  );
+  const lastName =
+    cleanRequiredText(
+      driver.last_name,
+      "apellidos"
+    );
 
-  const phone = validatePhone(driver.phone);
+  const phone =
+    validatePhone(
+      driver.phone
+    );
 
-  const email = validateEmail(
-    cleanOptionalText(driver.email)
-  );
+  const email =
+    validateEmail(
+      cleanOptionalText(
+        driver.email
+      )
+    );
 
-  const vehicleType = validateVehicleType(
-    driver.vehicle_type
-  );
+  const vehicleType =
+    validateVehicleType(
+      driver.vehicle_type
+    );
 
-  const active = driver.active ?? true;
+  const active =
+    driver.active ?? true;
 
-  let status = validateDriverStatus(
-    driver.status ?? "Disponible"
-  );
+  let status =
+    validateDriverStatus(
+      driver.status ??
+        "Disponible"
+    );
 
   if (!active) {
     status = "Inactivo";
@@ -368,26 +463,31 @@ function prepareDriverPayload(
     first_name: firstName,
     last_name: lastName,
 
-    identification: cleanOptionalText(
-      driver.identification
-    ),
+    identification:
+      cleanOptionalText(
+        driver.identification
+      ),
 
     phone,
     email,
 
-    vehicle_type: vehicleType,
+    vehicle_type:
+      vehicleType,
 
-    vehicle_brand: cleanOptionalText(
-      driver.vehicle_brand
-    ),
+    vehicle_brand:
+      cleanOptionalText(
+        driver.vehicle_brand
+      ),
 
-    vehicle_model: cleanOptionalText(
-      driver.vehicle_model
-    ),
+    vehicle_model:
+      cleanOptionalText(
+        driver.vehicle_model
+      ),
 
-    vehicle_color: cleanOptionalText(
-      driver.vehicle_color
-    ),
+    vehicle_color:
+      cleanOptionalText(
+        driver.vehicle_color
+      ),
 
     vehicle_plate:
       cleanOptionalText(
@@ -397,217 +497,178 @@ function prepareDriverPayload(
     status,
     active,
 
-    notes: cleanOptionalText(driver.notes),
+    notes:
+      cleanOptionalText(
+        driver.notes
+      ),
   };
 }
 
-function getDatabaseErrorMessage(
-  error: {
-    code?: string;
-    message?: string;
-    details?: string;
-  },
-  defaultMessage: string
-): string {
-  if (error.code === "23505") {
-    const details = normalizeText(
-      `${error.message ?? ""} ${
-        error.details ?? ""
-      }`
-    );
-
-    if (details.includes("phone")) {
-      return "Ya existe un repartidor registrado con ese número de celular.";
-    }
-
-    if (details.includes("email")) {
-      return "Ya existe un repartidor registrado con ese correo electrónico.";
-    }
-
-    if (details.includes("identification")) {
-      return "Ya existe un repartidor registrado con esa identificación.";
-    }
-
-    if (
-      details.includes("vehicle_plate") ||
-      details.includes("plate")
-    ) {
-      return "Ya existe un repartidor registrado con esa placa.";
-    }
-
-    return "Ya existe un repartidor con alguno de los datos ingresados.";
-  }
-
-  if (error.code === "23514") {
-    return "Uno de los valores ingresados no cumple las reglas del Centro Delivery.";
-  }
-
-  return defaultMessage;
-}
-
-export async function getDeliveryDrivers(): Promise<
-  DeliveryDriver[]
-> {
-  const { data, error } = await supabase
-    .from("delivery_drivers")
-    .select(`
-      id,
-      first_name,
-      last_name,
-      identification,
-      phone,
-      email,
-      vehicle_type,
-      vehicle_brand,
-      vehicle_model,
-      vehicle_color,
-      vehicle_plate,
-      status,
-      active,
-      current_latitude,
-      current_longitude,
-      last_location_at,
-      notes,
-      created_at,
-      updated_at
-    `)
-    .order("active", {
-      ascending: false,
-    })
-    .order("first_name", {
-      ascending: true,
-    })
-    .order("last_name", {
-      ascending: true,
-    });
-
-  if (error) {
-    console.error(
-      "Error cargando repartidores:",
-      {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      }
-    );
-
-    throw new Error(
-      "No fue posible cargar los repartidores de MercaNova GO."
-    );
-  }
-
-  return ((data ?? []) as RawDeliveryDriver[]).map(
-    normalizeDriver
-  );
-}
-
-export async function getAvailableDeliveryDrivers(): Promise<
-  DeliveryDriver[]
-> {
-  const { data, error } = await supabase
-    .from("delivery_drivers")
-    .select(`
-      id,
-      first_name,
-      last_name,
-      identification,
-      phone,
-      email,
-      vehicle_type,
-      vehicle_brand,
-      vehicle_model,
-      vehicle_color,
-      vehicle_plate,
-      status,
-      active,
-      current_latitude,
-      current_longitude,
-      last_location_at,
-      notes,
-      created_at,
-      updated_at
-    `)
-    .eq("active", true)
-    .eq("status", "Disponible")
-    .order("first_name", {
-      ascending: true,
-    })
-    .order("last_name", {
-      ascending: true,
-    });
-
-  if (error) {
-    console.error(
-      "Error cargando repartidores disponibles:",
-      {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      }
-    );
-
-    throw new Error(
-      "No fue posible cargar los repartidores disponibles."
-    );
-  }
-
-  return ((data ?? []) as RawDeliveryDriver[]).map(
-    normalizeDriver
-  );
-}
-
-export async function getDeliveryDriverById(
+function validateDriverId(
   id: number
-): Promise<DeliveryDriver> {
-  if (!Number.isInteger(id) || id <= 0) {
+): number {
+  if (
+    !Number.isInteger(id) ||
+    id <= 0
+  ) {
     throw new Error(
       "El identificador del repartidor no es válido."
     );
   }
 
-  const { data, error } = await supabase
-    .from("delivery_drivers")
-    .select(`
-      id,
-      first_name,
-      last_name,
-      identification,
-      phone,
-      email,
-      vehicle_type,
-      vehicle_brand,
-      vehicle_model,
-      vehicle_color,
-      vehicle_plate,
-      status,
-      active,
-      current_latitude,
-      current_longitude,
-      last_location_at,
-      notes,
-      created_at,
-      updated_at
-    `)
-    .eq("id", id)
-    .single();
+  return id;
+}
 
-  if (error) {
-    console.error(
-      "Error cargando repartidor:",
-      {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      }
-    );
+async function getAccessToken(): Promise<string> {
+  const session =
+    await getAdminSession();
 
+  if (!session?.accessToken) {
     throw new Error(
-      "No fue posible cargar la información del repartidor."
+      "No existe una sesión administrativa válida."
     );
   }
+
+  return session.accessToken;
+}
+
+async function callDriversApi(
+  options: {
+    method?:
+      | "GET"
+      | "POST"
+      | "PATCH"
+      | "DELETE";
+    query?: URLSearchParams;
+    body?: Record<
+      string,
+      unknown
+    >;
+  } = {}
+): Promise<unknown> {
+  const accessToken =
+    await getAccessToken();
+
+  const queryString =
+    options.query?.toString();
+
+  const url =
+    queryString
+      ? `/api/admin/delivery/drivers?${queryString}`
+      : "/api/admin/delivery/drivers";
+
+  const response =
+    await fetch(url, {
+      method:
+        options.method ??
+        "GET",
+
+      cache: "no-store",
+
+      headers: {
+        Accept:
+          "application/json",
+
+        Authorization:
+          `Bearer ${accessToken}`,
+
+        ...(options.body
+          ? {
+              "Content-Type":
+                "application/json",
+            }
+          : {}),
+      },
+
+      ...(options.body
+        ? {
+            body:
+              JSON.stringify(
+                options.body
+              ),
+          }
+        : {}),
+    });
+
+  let result:
+    | DeliveryDriverApiResponse
+    | null = null;
+
+  try {
+    result =
+      (await response.json()) as
+        DeliveryDriverApiResponse;
+  } catch {
+    result = null;
+  }
+
+  if (
+    !response.ok ||
+    !result?.ok
+  ) {
+    throw new Error(
+      result?.error ??
+        `Error HTTP ${response.status}.`
+    );
+  }
+
+  return result.data;
+}
+
+export async function getDeliveryDrivers(): Promise<
+  DeliveryDriver[]
+> {
+  const query =
+    new URLSearchParams({
+      scope: "all",
+    });
+
+  const data =
+    await callDriversApi({
+      query,
+    });
+
+  return (
+    (data ?? []) as
+      RawDeliveryDriver[]
+  ).map(normalizeDriver);
+}
+
+export async function getAvailableDeliveryDrivers(): Promise<
+  DeliveryDriver[]
+> {
+  const query =
+    new URLSearchParams({
+      scope: "available",
+    });
+
+  const data =
+    await callDriversApi({
+      query,
+    });
+
+  return (
+    (data ?? []) as
+      RawDeliveryDriver[]
+  ).map(normalizeDriver);
+}
+
+export async function getDeliveryDriverById(
+  id: number
+): Promise<DeliveryDriver> {
+  const driverId =
+    validateDriverId(id);
+
+  const query =
+    new URLSearchParams({
+      scope: "id",
+      id: String(driverId),
+    });
+
+  const data =
+    await callDriversApi({
+      query,
+    });
 
   if (!data) {
     throw new Error(
@@ -623,58 +684,19 @@ export async function getDeliveryDriverById(
 export async function createDeliveryDriver(
   driver: DeliveryDriverFormData
 ): Promise<DeliveryDriver> {
-  const payload = prepareDriverPayload(driver);
-
-  const { data, error } = await supabase
-    .from("delivery_drivers")
-    .insert(payload)
-    .select(`
-      id,
-      first_name,
-      last_name,
-      identification,
-      phone,
-      email,
-      vehicle_type,
-      vehicle_brand,
-      vehicle_model,
-      vehicle_color,
-      vehicle_plate,
-      status,
-      active,
-      current_latitude,
-      current_longitude,
-      last_location_at,
-      notes,
-      created_at,
-      updated_at
-    `)
-    .single();
-
-  if (error) {
-    console.error(
-      "Error creando repartidor:",
-      {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      }
+  const payload =
+    prepareDriverPayload(
+      driver
     );
 
-    throw new Error(
-      getDatabaseErrorMessage(
-        error,
-        "No fue posible registrar el repartidor."
-      )
-    );
-  }
-
-  if (!data) {
-    throw new Error(
-      "Supabase no devolvió el repartidor registrado."
-    );
-  }
+  const data =
+    await callDriversApi({
+      method: "POST",
+      body: {
+        action: "create",
+        driver: payload,
+      },
+    });
 
   return normalizeDriver(
     data as RawDeliveryDriver
@@ -685,65 +707,23 @@ export async function updateDeliveryDriver(
   id: number,
   driver: DeliveryDriverFormData
 ): Promise<DeliveryDriver> {
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new Error(
-      "El identificador del repartidor no es válido."
-    );
-  }
+  const driverId =
+    validateDriverId(id);
 
-  const payload = prepareDriverPayload(driver);
-
-  const { data, error } = await supabase
-    .from("delivery_drivers")
-    .update(payload)
-    .eq("id", id)
-    .select(`
-      id,
-      first_name,
-      last_name,
-      identification,
-      phone,
-      email,
-      vehicle_type,
-      vehicle_brand,
-      vehicle_model,
-      vehicle_color,
-      vehicle_plate,
-      status,
-      active,
-      current_latitude,
-      current_longitude,
-      last_location_at,
-      notes,
-      created_at,
-      updated_at
-    `)
-    .single();
-
-  if (error) {
-    console.error(
-      "Error actualizando repartidor:",
-      {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      }
+  const payload =
+    prepareDriverPayload(
+      driver
     );
 
-    throw new Error(
-      getDatabaseErrorMessage(
-        error,
-        "No fue posible actualizar el repartidor."
-      )
-    );
-  }
-
-  if (!data) {
-    throw new Error(
-      "Supabase no devolvió el repartidor actualizado."
-    );
-  }
+  const data =
+    await callDriversApi({
+      method: "PATCH",
+      body: {
+        action: "update",
+        driverId,
+        driver: payload,
+      },
+    });
 
   return normalizeDriver(
     data as RawDeliveryDriver
@@ -754,68 +734,23 @@ export async function updateDeliveryDriverStatus(
   id: number,
   status: DriverStatus
 ): Promise<DeliveryDriver> {
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new Error(
-      "El identificador del repartidor no es válido."
-    );
-  }
+  const driverId =
+    validateDriverId(id);
 
   const validStatus =
-    validateDriverStatus(status);
-
-  const active = validStatus !== "Inactivo";
-
-  const { data, error } = await supabase
-    .from("delivery_drivers")
-    .update({
-      status: validStatus,
-      active,
-    })
-    .eq("id", id)
-    .select(`
-      id,
-      first_name,
-      last_name,
-      identification,
-      phone,
-      email,
-      vehicle_type,
-      vehicle_brand,
-      vehicle_model,
-      vehicle_color,
-      vehicle_plate,
-      status,
-      active,
-      current_latitude,
-      current_longitude,
-      last_location_at,
-      notes,
-      created_at,
-      updated_at
-    `)
-    .single();
-
-  if (error) {
-    console.error(
-      "Error actualizando estado del repartidor:",
-      {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      }
+    validateDriverStatus(
+      status
     );
 
-    throw new Error(
-      "No fue posible actualizar el estado del repartidor."
-    );
-  }
-
-  if (!data) {
-    throw new Error(
-      "Supabase no devolvió el repartidor actualizado."
-    );
-  }
+  const data =
+    await callDriversApi({
+      method: "PATCH",
+      body: {
+        action: "status",
+        driverId,
+        status: validStatus,
+      },
+    });
 
   return normalizeDriver(
     data as RawDeliveryDriver
@@ -826,69 +761,18 @@ export async function setDeliveryDriverActive(
   id: number,
   active: boolean
 ): Promise<DeliveryDriver> {
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new Error(
-      "El identificador del repartidor no es válido."
-    );
-  }
+  const driverId =
+    validateDriverId(id);
 
-  const status: DriverStatus = active
-    ? "Disponible"
-    : "Inactivo";
-
-  const { data, error } = await supabase
-    .from("delivery_drivers")
-    .update({
-      active,
-      status,
-    })
-    .eq("id", id)
-    .select(`
-      id,
-      first_name,
-      last_name,
-      identification,
-      phone,
-      email,
-      vehicle_type,
-      vehicle_brand,
-      vehicle_model,
-      vehicle_color,
-      vehicle_plate,
-      status,
-      active,
-      current_latitude,
-      current_longitude,
-      last_location_at,
-      notes,
-      created_at,
-      updated_at
-    `)
-    .single();
-
-  if (error) {
-    console.error(
-      "Error cambiando actividad del repartidor:",
-      {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      }
-    );
-
-    throw new Error(
-      active
-        ? "No fue posible activar el repartidor."
-        : "No fue posible desactivar el repartidor."
-    );
-  }
-
-  if (!data) {
-    throw new Error(
-      "Supabase no devolvió el repartidor actualizado."
-    );
-  }
+  const data =
+    await callDriversApi({
+      method: "PATCH",
+      body: {
+        action: "active",
+        driverId,
+        active,
+      },
+    });
 
   return normalizeDriver(
     data as RawDeliveryDriver
@@ -900,11 +784,8 @@ export async function updateDeliveryDriverLocation(
   latitude: number,
   longitude: number
 ): Promise<DeliveryDriver> {
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new Error(
-      "El identificador del repartidor no es válido."
-    );
-  }
+  const driverId =
+    validateDriverId(id);
 
   if (
     !Number.isFinite(latitude) ||
@@ -926,58 +807,16 @@ export async function updateDeliveryDriverLocation(
     );
   }
 
-  const { data, error } = await supabase
-    .from("delivery_drivers")
-    .update({
-      current_latitude: latitude,
-      current_longitude: longitude,
-      last_location_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .select(`
-      id,
-      first_name,
-      last_name,
-      identification,
-      phone,
-      email,
-      vehicle_type,
-      vehicle_brand,
-      vehicle_model,
-      vehicle_color,
-      vehicle_plate,
-      status,
-      active,
-      current_latitude,
-      current_longitude,
-      last_location_at,
-      notes,
-      created_at,
-      updated_at
-    `)
-    .single();
-
-  if (error) {
-    console.error(
-      "Error actualizando ubicación del repartidor:",
-      {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      }
-    );
-
-    throw new Error(
-      "No fue posible actualizar la ubicación del repartidor."
-    );
-  }
-
-  if (!data) {
-    throw new Error(
-      "Supabase no devolvió la ubicación actualizada."
-    );
-  }
+  const data =
+    await callDriversApi({
+      method: "PATCH",
+      body: {
+        action: "location",
+        driverId,
+        latitude,
+        longitude,
+      },
+    });
 
   return normalizeDriver(
     data as RawDeliveryDriver
@@ -987,64 +826,17 @@ export async function updateDeliveryDriverLocation(
 export async function deleteDeliveryDriver(
   id: number
 ): Promise<void> {
-  if (!Number.isInteger(id) || id <= 0) {
-    throw new Error(
-      "El identificador del repartidor no es válido."
-    );
-  }
+  const driverId =
+    validateDriverId(id);
 
-  const { data: activeAssignments, error: assignmentError } =
-    await supabase
-      .from("delivery_assignments")
-      .select("id")
-      .eq("driver_id", id)
-      .not("status", "in", '("Entregado","Cancelado")')
-      .limit(1);
+  const query =
+    new URLSearchParams({
+      driverId:
+        String(driverId),
+    });
 
-  if (assignmentError) {
-    console.error(
-      "Error verificando asignaciones del repartidor:",
-      assignmentError
-    );
-
-    throw new Error(
-      "No fue posible verificar las asignaciones del repartidor."
-    );
-  }
-
-  if (
-    activeAssignments &&
-    activeAssignments.length > 0
-  ) {
-    throw new Error(
-      "No es posible eliminar un repartidor que mantiene una entrega activa."
-    );
-  }
-
-  const { error } = await supabase
-    .from("delivery_drivers")
-    .delete()
-    .eq("id", id);
-
-  if (error) {
-    console.error(
-      "Error eliminando repartidor:",
-      {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      }
-    );
-
-    if (error.code === "23503") {
-      throw new Error(
-        "El repartidor tiene asignaciones históricas. Desactívalo en lugar de eliminarlo."
-      );
-    }
-
-    throw new Error(
-      "No fue posible eliminar el repartidor."
-    );
-  }
+  await callDriversApi({
+    method: "DELETE",
+    query,
+  });
 }
