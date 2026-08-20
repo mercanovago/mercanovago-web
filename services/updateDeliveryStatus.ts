@@ -18,6 +18,15 @@ function isValidDeliveryStatus(
   );
 }
 
+interface UpdateDeliveryStatusResponse {
+  ok: boolean;
+  data?: {
+    id: number;
+    delivery_status: AdminDeliveryStatus;
+  };
+  error?: string;
+}
+
 export async function updateDeliveryStatus(
   id: number,
   deliveryStatus: string
@@ -34,40 +43,78 @@ export async function updateDeliveryStatus(
     );
   }
 
-  const { data, error } = await supabase
-    .from("orders")
-    .update({
-      delivery_status: deliveryStatus,
-    })
-    .eq("id", id)
-    .select("id,delivery_status")
-    .single();
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
 
-  if (error) {
+  if (
+    sessionError ||
+    !session?.access_token
+  ) {
     console.error(
-      "Error actualizando estado logístico:",
+      "No existe una sesión administrativa válida:",
+      sessionError
+    );
+
+    throw new Error(
+      "La sesión administrativa no es válida. Inicia sesión nuevamente."
+    );
+  }
+
+  const response = await fetch(
+    "/api/admin/orders",
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type":
+          "application/json",
+        Authorization:
+          `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        id,
+        delivery_status:
+          deliveryStatus,
+      }),
+    }
+  );
+
+  let result:
+    | UpdateDeliveryStatusResponse
+    | null = null;
+
+  try {
+    result =
+      (await response.json()) as
+        UpdateDeliveryStatusResponse;
+  } catch {
+    result = null;
+  }
+
+  if (
+    !response.ok ||
+    !result?.ok ||
+    !result.data
+  ) {
+    const message =
+      result?.error ??
+      "No fue posible actualizar el estado logístico del pedido.";
+
+    console.error(
+      "Error actualizando estado logístico mediante API:",
       {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
+        status: response.status,
+        message,
       }
     );
 
-    throw new Error(
-      "No fue posible actualizar el estado logístico del pedido."
-    );
-  }
-
-  if (!data) {
-    throw new Error(
-      "Supabase no devolvió el pedido actualizado."
-    );
+    throw new Error(message);
   }
 
   return {
-    id: Number(data.id),
+    id: Number(result.data.id),
     delivery_status:
-      data.delivery_status as AdminDeliveryStatus,
+      result.data.delivery_status,
   };
 }

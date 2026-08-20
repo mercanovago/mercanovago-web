@@ -27,6 +27,21 @@ const ORDER_STATUSES = [
 type OrderStatus =
   (typeof ORDER_STATUSES)[number];
 
+const DELIVERY_STATUSES = [
+  "Pendiente",
+  "Por coordinar",
+  "Programada",
+  "Confirmada",
+  "Preparando",
+  "Lista para entrega",
+  "En camino",
+  "Entregada",
+  "Cancelada",
+] as const;
+
+type DeliveryStatus =
+  (typeof DELIVERY_STATUSES)[number];
+
 interface AuthorizedAdmin {
   userId: string;
   role: string;
@@ -62,6 +77,17 @@ function isValidOrderStatus(
     typeof status === "string" &&
     ORDER_STATUSES.includes(
       status as OrderStatus
+    )
+  );
+}
+
+function isValidDeliveryStatus(
+  status: unknown
+): status is DeliveryStatus {
+  return (
+    typeof status === "string" &&
+    DELIVERY_STATUSES.includes(
+      status as DeliveryStatus
     )
   );
 }
@@ -356,6 +382,7 @@ export async function PATCH(
     const payload = body as {
       id?: unknown;
       status?: unknown;
+      delivery_status?: unknown;
     };
 
     const id = Number(payload.id);
@@ -374,23 +401,115 @@ export async function PATCH(
       );
     }
 
+    const hasOrderStatus =
+      payload.status !== undefined;
+
+    const hasDeliveryStatus =
+      payload.delivery_status !== undefined;
+
     if (
-      !isValidOrderStatus(
-        payload.status
+      hasOrderStatus === hasDeliveryStatus
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Debe enviarse exactamente un estado para actualizar.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (hasOrderStatus) {
+      if (
+        !isValidOrderStatus(
+          payload.status
+        )
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "El estado seleccionado no es válido.",
+          },
+          { status: 400 }
+        );
+      }
+
+      const status = payload.status;
+
+      const {
+        data,
+        error,
+      } = await supabaseAdmin
+        .from("orders")
+        .update({
+          status,
+        })
+        .eq("id", id)
+        .select("id,status")
+        .maybeSingle();
+
+      if (error) {
+        console.error(
+          "Error actualizando estado del pedido:",
+          {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+            orderId: id,
+          }
+        );
+
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "No fue posible actualizar el estado del pedido.",
+          },
+          { status: 500 }
+        );
+      }
+
+      if (!data) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "El pedido solicitado no existe.",
+          },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        ok: true,
+        data: {
+          id: Number(data.id),
+          status:
+            data.status as OrderStatus,
+        },
+      });
+    }
+
+    if (
+      !isValidDeliveryStatus(
+        payload.delivery_status
       )
     ) {
       return NextResponse.json(
         {
           ok: false,
           error:
-            "El estado seleccionado no es válido.",
+            "El estado logístico seleccionado no es válido.",
         },
         { status: 400 }
       );
     }
 
-    const status =
-      payload.status;
+    const deliveryStatus =
+      payload.delivery_status;
 
     const {
       data,
@@ -398,15 +517,16 @@ export async function PATCH(
     } = await supabaseAdmin
       .from("orders")
       .update({
-        status,
+        delivery_status:
+          deliveryStatus,
       })
       .eq("id", id)
-      .select("id,status")
+      .select("id,delivery_status")
       .maybeSingle();
 
     if (error) {
       console.error(
-        "Error actualizando estado del pedido:",
+        "Error actualizando estado logístico:",
         {
           message: error.message,
           details: error.details,
@@ -420,7 +540,7 @@ export async function PATCH(
         {
           ok: false,
           error:
-            "No fue posible actualizar el estado del pedido.",
+            "No fue posible actualizar el estado logístico del pedido.",
         },
         { status: 500 }
       );
@@ -441,8 +561,8 @@ export async function PATCH(
       ok: true,
       data: {
         id: Number(data.id),
-        status:
-          data.status as OrderStatus,
+        delivery_status:
+          data.delivery_status as DeliveryStatus,
       },
     });
   } catch (error) {
