@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { getAdminSession } from "@/services/adminLogin";
 
 export const DELIVERY_ASSIGNMENT_STATUSES = [
   "Asignado",
@@ -168,6 +168,12 @@ interface RawDeliveryAssignment {
     | null;
 }
 
+interface DeliveryApiResponse {
+  ok: boolean;
+  data?: unknown;
+  error?: string;
+}
+
 const ACTIVE_ASSIGNMENT_STATUSES: DeliveryAssignmentStatus[] = [
   "Asignado",
   "Aceptado",
@@ -175,67 +181,6 @@ const ACTIVE_ASSIGNMENT_STATUSES: DeliveryAssignmentStatus[] = [
   "Pedido retirado",
   "En ruta",
 ];
-
-const ASSIGNMENT_SELECT = `
-  id,
-  order_id,
-  driver_id,
-  status,
-  assigned_at,
-  accepted_at,
-  preparation_completed_at,
-  picked_up_at,
-  started_at,
-  delivered_at,
-  cancelled_at,
-  estimated_arrival_at,
-  origin_address,
-  destination_address,
-  origin_latitude,
-  origin_longitude,
-  destination_latitude,
-  destination_longitude,
-  distance_km,
-  estimated_duration_minutes,
-  assignment_notes,
-  delivery_notes,
-  cancellation_reason,
-  proof_of_delivery_url,
-  created_at,
-  updated_at
-`;
-
-const ASSIGNMENT_WITH_RELATIONS_SELECT = `
-  ${ASSIGNMENT_SELECT},
-  delivery_drivers (
-    id,
-    first_name,
-    last_name,
-    phone,
-    email,
-    vehicle_type,
-    vehicle_brand,
-    vehicle_model,
-    vehicle_color,
-    vehicle_plate,
-    status,
-    active
-  ),
-  orders (
-    id,
-    customer_id,
-    status,
-    delivery_status,
-    delivery_type,
-    delivery_date,
-    delivery_time,
-    delivery_window,
-    estimated_delivery,
-    delivery_notes,
-    total,
-    created_at
-  )
-`;
 
 function cleanOptionalText(
   value: string | null | undefined
@@ -278,7 +223,11 @@ function validatePositiveId(
 function validateAssignmentStatus(
   status: DeliveryAssignmentStatus
 ): DeliveryAssignmentStatus {
-  if (!DELIVERY_ASSIGNMENT_STATUSES.includes(status)) {
+  if (
+    !DELIVERY_ASSIGNMENT_STATUSES.includes(
+      status
+    )
+  ) {
     throw new Error(
       "El estado de la asignación no es válido."
     );
@@ -291,11 +240,17 @@ function validateNonNegativeNumber(
   value: number | null | undefined,
   fieldName: string
 ): number | null {
-  if (value === null || value === undefined) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
     return null;
   }
 
-  if (!Number.isFinite(value) || value < 0) {
+  if (
+    !Number.isFinite(value) ||
+    value < 0
+  ) {
     throw new Error(
       `${fieldName} debe ser un valor mayor o igual a cero.`
     );
@@ -307,7 +262,8 @@ function validateNonNegativeNumber(
 function normalizeAssignmentStatus(
   value: string | null | undefined
 ): DeliveryAssignmentStatus {
-  const status = value?.trim() ?? "";
+  const status =
+    value?.trim() ?? "";
 
   if (
     DELIVERY_ASSIGNMENT_STATUSES.includes(
@@ -320,85 +276,12 @@ function normalizeAssignmentStatus(
   return "Asignado";
 }
 
-function normalizeAssignment(
-  assignment: RawDeliveryAssignment
-): DeliveryAssignment {
-  return {
-    id: Number(assignment.id),
-    order_id: Number(assignment.order_id),
-    driver_id: Number(assignment.driver_id),
-
-    status: normalizeAssignmentStatus(
-      assignment.status
-    ),
-
-    assigned_at: assignment.assigned_at,
-    accepted_at: assignment.accepted_at,
-    preparation_completed_at:
-      assignment.preparation_completed_at,
-    picked_up_at: assignment.picked_up_at,
-    started_at: assignment.started_at,
-    delivered_at: assignment.delivered_at,
-    cancelled_at: assignment.cancelled_at,
-    estimated_arrival_at:
-      assignment.estimated_arrival_at,
-
-    origin_address: cleanOptionalText(
-      assignment.origin_address
-    ),
-
-    destination_address: cleanOptionalText(
-      assignment.destination_address
-    ),
-
-    origin_latitude: toNullableNumber(
-      assignment.origin_latitude
-    ),
-
-    origin_longitude: toNullableNumber(
-      assignment.origin_longitude
-    ),
-
-    destination_latitude: toNullableNumber(
-      assignment.destination_latitude
-    ),
-
-    destination_longitude: toNullableNumber(
-      assignment.destination_longitude
-    ),
-
-    distance_km: toNullableNumber(
-      assignment.distance_km
-    ),
-
-    estimated_duration_minutes:
-      toNullableNumber(
-        assignment.estimated_duration_minutes
-      ),
-
-    assignment_notes: cleanOptionalText(
-      assignment.assignment_notes
-    ),
-
-    delivery_notes: cleanOptionalText(
-      assignment.delivery_notes
-    ),
-
-    cancellation_reason: cleanOptionalText(
-      assignment.cancellation_reason
-    ),
-
-    proof_of_delivery_url: cleanOptionalText(
-      assignment.proof_of_delivery_url
-    ),
-
-    created_at: assignment.created_at,
-    updated_at: assignment.updated_at,
-  };
-}
-
 function normalizeSingleRelation<T>(
-  relation: T | T[] | null | undefined
+  relation:
+    | T
+    | T[]
+    | null
+    | undefined
 ): T | null {
   if (!relation) {
     return null;
@@ -411,11 +294,114 @@ function normalizeSingleRelation<T>(
   return relation;
 }
 
+function normalizeAssignment(
+  assignment: RawDeliveryAssignment
+): DeliveryAssignment {
+  return {
+    id: Number(assignment.id),
+    order_id: Number(
+      assignment.order_id
+    ),
+    driver_id: Number(
+      assignment.driver_id
+    ),
+
+    status:
+      normalizeAssignmentStatus(
+        assignment.status
+      ),
+
+    assigned_at:
+      assignment.assigned_at,
+    accepted_at:
+      assignment.accepted_at,
+    preparation_completed_at:
+      assignment.preparation_completed_at,
+    picked_up_at:
+      assignment.picked_up_at,
+    started_at:
+      assignment.started_at,
+    delivered_at:
+      assignment.delivered_at,
+    cancelled_at:
+      assignment.cancelled_at,
+    estimated_arrival_at:
+      assignment.estimated_arrival_at,
+
+    origin_address:
+      cleanOptionalText(
+        assignment.origin_address
+      ),
+
+    destination_address:
+      cleanOptionalText(
+        assignment.destination_address
+      ),
+
+    origin_latitude:
+      toNullableNumber(
+        assignment.origin_latitude
+      ),
+
+    origin_longitude:
+      toNullableNumber(
+        assignment.origin_longitude
+      ),
+
+    destination_latitude:
+      toNullableNumber(
+        assignment.destination_latitude
+      ),
+
+    destination_longitude:
+      toNullableNumber(
+        assignment.destination_longitude
+      ),
+
+    distance_km:
+      toNullableNumber(
+        assignment.distance_km
+      ),
+
+    estimated_duration_minutes:
+      toNullableNumber(
+        assignment.estimated_duration_minutes
+      ),
+
+    assignment_notes:
+      cleanOptionalText(
+        assignment.assignment_notes
+      ),
+
+    delivery_notes:
+      cleanOptionalText(
+        assignment.delivery_notes
+      ),
+
+    cancellation_reason:
+      cleanOptionalText(
+        assignment.cancellation_reason
+      ),
+
+    proof_of_delivery_url:
+      cleanOptionalText(
+        assignment.proof_of_delivery_url
+      ),
+
+    created_at:
+      assignment.created_at,
+    updated_at:
+      assignment.updated_at,
+  };
+}
+
 function normalizeAssignmentWithRelations(
   assignment: RawDeliveryAssignment
 ): DeliveryAssignmentWithRelations {
   return {
-    ...normalizeAssignment(assignment),
+    ...normalizeAssignment(
+      assignment
+    ),
 
     delivery_drivers:
       normalizeSingleRelation(
@@ -429,98 +415,110 @@ function normalizeAssignmentWithRelations(
   };
 }
 
-function getDatabaseErrorMessage(
-  error: {
-    code?: string;
-    message?: string;
-    details?: string;
-    hint?: string;
-  },
-  defaultMessage: string
-): string {
-  const errorText = `${error.message ?? ""} ${
-    error.details ?? ""
-  }`.toLowerCase();
+async function getAccessToken(): Promise<string> {
+  const session =
+    await getAdminSession();
 
-  if (error.code === "23505") {
-    if (
-      errorText.includes(
-        "idx_delivery_assignments_one_active_per_order"
-      ) ||
-      errorText.includes("order_id")
-    ) {
-      return "Este pedido ya tiene una asignación de entrega activa.";
-    }
-
-    if (
-      errorText.includes(
-        "idx_delivery_assignments_one_active_per_driver"
-      ) ||
-      errorText.includes("driver_id")
-    ) {
-      return "Este repartidor ya tiene una entrega activa.";
-    }
-
-    return "La asignación no pudo registrarse porque existe un conflicto con otra asignación activa.";
+  if (!session?.accessToken) {
+    throw new Error(
+      "No existe una sesión administrativa válida."
+    );
   }
 
-  if (error.code === "23503") {
-    if (errorText.includes("driver")) {
-      return "El repartidor seleccionado no existe o ya no está disponible.";
-    }
-
-    if (errorText.includes("order")) {
-      return "El pedido seleccionado no existe.";
-    }
-
-    return "La asignación contiene una referencia que ya no existe.";
-  }
-
-  if (error.code === "23514") {
-    return "Uno de los valores ingresados no cumple las reglas del Centro Delivery.";
-  }
-
-  if (error.code === "42501") {
-    return "No tienes permisos para realizar esta operación logística.";
-  }
-
-  return error.message || defaultMessage;
+  return session.accessToken;
 }
 
-function logSupabaseError(
-  context: string,
-  error: {
-    code?: string;
-    message?: string;
-    details?: string;
-    hint?: string;
+async function callDeliveryApi(
+  options: {
+    method?: "GET" | "POST" | "PATCH";
+    query?: URLSearchParams;
+    body?: Record<string, unknown>;
+  } = {}
+): Promise<unknown> {
+  const accessToken =
+    await getAccessToken();
+
+  const query =
+    options.query?.toString();
+
+  const url = query
+    ? `/api/admin/delivery/assignments?${query}`
+    : "/api/admin/delivery/assignments";
+
+  const response = await fetch(
+    url,
+    {
+      method:
+        options.method ?? "GET",
+      cache: "no-store",
+      headers: {
+        Accept:
+          "application/json",
+        Authorization:
+          `Bearer ${accessToken}`,
+        ...(options.body
+          ? {
+              "Content-Type":
+                "application/json",
+            }
+          : {}),
+      },
+      ...(options.body
+        ? {
+            body: JSON.stringify(
+              options.body
+            ),
+          }
+        : {}),
+    }
+  );
+
+  let result:
+    | DeliveryApiResponse
+    | null = null;
+
+  try {
+    result =
+      (await response.json()) as
+        DeliveryApiResponse;
+  } catch {
+    result = null;
   }
-) {
-  console.error(context, {
-    message: error.message,
-    details: error.details,
-    hint: error.hint,
-    code: error.code,
-  });
+
+  if (
+    !response.ok ||
+    !result?.ok
+  ) {
+    const message =
+      result?.error ??
+      `Error HTTP ${response.status}.`;
+
+    throw new Error(message);
+  }
+
+  return result.data;
 }
 
 function prepareCreatePayload(
   input: CreateDeliveryAssignmentInput
 ) {
-  const orderId = validatePositiveId(
-    input.order_id,
-    "pedido"
-  );
+  const orderId =
+    validatePositiveId(
+      input.order_id,
+      "pedido"
+    );
 
-  const driverId = validatePositiveId(
-    input.driver_id,
-    "repartidor"
-  );
+  const driverId =
+    validatePositiveId(
+      input.driver_id,
+      "repartidor"
+    );
 
-  const distanceKm = validateNonNegativeNumber(
-    input.distance_km,
-    "La distancia"
-  );
+  const distanceKm =
+    validateNonNegativeNumber(
+      input.distance_km,
+      "La distancia"
+    );
 
   const estimatedDurationMinutes =
     validateNonNegativeNumber(
@@ -531,83 +529,86 @@ function prepareCreatePayload(
   return {
     order_id: orderId,
     driver_id: driverId,
-    status: "Asignado" as const,
 
-    origin_address: cleanOptionalText(
-      input.origin_address
-    ),
+    origin_address:
+      cleanOptionalText(
+        input.origin_address
+      ),
 
-    destination_address: cleanOptionalText(
-      input.destination_address
-    ),
+    destination_address:
+      cleanOptionalText(
+        input.destination_address
+      ),
 
-    origin_latitude: toNullableNumber(
-      input.origin_latitude
-    ),
+    origin_latitude:
+      toNullableNumber(
+        input.origin_latitude
+      ),
 
-    origin_longitude: toNullableNumber(
-      input.origin_longitude
-    ),
+    origin_longitude:
+      toNullableNumber(
+        input.origin_longitude
+      ),
 
-    destination_latitude: toNullableNumber(
-      input.destination_latitude
-    ),
+    destination_latitude:
+      toNullableNumber(
+        input.destination_latitude
+      ),
 
-    destination_longitude: toNullableNumber(
-      input.destination_longitude
-    ),
+    destination_longitude:
+      toNullableNumber(
+        input.destination_longitude
+      ),
 
     distance_km: distanceKm,
 
     estimated_duration_minutes:
       estimatedDurationMinutes === null
         ? null
-        : Math.round(estimatedDurationMinutes),
+        : Math.round(
+            estimatedDurationMinutes
+          ),
 
     estimated_arrival_at:
-      input.estimated_arrival_at ?? null,
+      input.estimated_arrival_at ??
+      null,
 
-    assignment_notes: cleanOptionalText(
-      input.assignment_notes
-    ),
+    assignment_notes:
+      cleanOptionalText(
+        input.assignment_notes
+      ),
 
-    delivery_notes: cleanOptionalText(
-      input.delivery_notes
-    ),
+    delivery_notes:
+      cleanOptionalText(
+        input.delivery_notes
+      ),
   };
 }
 
 export function isActiveDeliveryAssignmentStatus(
   status: DeliveryAssignmentStatus
 ): boolean {
-  return ACTIVE_ASSIGNMENT_STATUSES.includes(status);
+  return ACTIVE_ASSIGNMENT_STATUSES.includes(
+    status
+  );
 }
 
 export async function getDeliveryAssignments(): Promise<
   DeliveryAssignmentWithRelations[]
 > {
-  const { data, error } = await supabase
-    .from("delivery_assignments")
-    .select(ASSIGNMENT_WITH_RELATIONS_SELECT)
-    .order("assigned_at", {
-      ascending: false,
+  const query =
+    new URLSearchParams({
+      scope: "all",
     });
 
-  if (error) {
-    logSupabaseError(
-      "Error cargando asignaciones de entrega:",
-      error
-    );
+  const data =
+    await callDeliveryApi({
+      query,
+    });
 
-    throw new Error(
-      getDatabaseErrorMessage(
-        error,
-        "No fue posible cargar las asignaciones de entrega."
-      )
-    );
-  }
-
-  return ((data ?? []) as unknown as RawDeliveryAssignment[]).map(
+  return (
+    (data ?? []) as RawDeliveryAssignment[]
+  ).map(
     normalizeAssignmentWithRelations
   );
 }
@@ -615,29 +616,19 @@ export async function getDeliveryAssignments(): Promise<
 export async function getActiveDeliveryAssignments(): Promise<
   DeliveryAssignmentWithRelations[]
 > {
-  const { data, error } = await supabase
-    .from("delivery_assignments")
-    .select(ASSIGNMENT_WITH_RELATIONS_SELECT)
-    .in("status", ACTIVE_ASSIGNMENT_STATUSES)
-    .order("assigned_at", {
-      ascending: false,
+  const query =
+    new URLSearchParams({
+      scope: "active",
     });
 
-  if (error) {
-    logSupabaseError(
-      "Error cargando asignaciones activas:",
-      error
-    );
+  const data =
+    await callDeliveryApi({
+      query,
+    });
 
-    throw new Error(
-      getDatabaseErrorMessage(
-        error,
-        "No fue posible cargar las asignaciones activas."
-      )
-    );
-  }
-
-  return ((data ?? []) as unknown as RawDeliveryAssignment[]).map(
+  return (
+    (data ?? []) as RawDeliveryAssignment[]
+  ).map(
     normalizeAssignmentWithRelations
   );
 }
@@ -645,30 +636,22 @@ export async function getActiveDeliveryAssignments(): Promise<
 export async function getDeliveryAssignmentById(
   assignmentId: number
 ): Promise<DeliveryAssignmentWithRelations> {
-  const id = validatePositiveId(
-    assignmentId,
-    "asignación"
-  );
-
-  const { data, error } = await supabase
-    .from("delivery_assignments")
-    .select(ASSIGNMENT_WITH_RELATIONS_SELECT)
-    .eq("id", id)
-    .single();
-
-  if (error) {
-    logSupabaseError(
-      "Error cargando asignación:",
-      error
+  const id =
+    validatePositiveId(
+      assignmentId,
+      "asignación"
     );
 
-    throw new Error(
-      getDatabaseErrorMessage(
-        error,
-        "No fue posible cargar la asignación de entrega."
-      )
-    );
-  }
+  const query =
+    new URLSearchParams({
+      scope: "id",
+      id: String(id),
+    });
+
+  const data =
+    await callDeliveryApi({
+      query,
+    });
 
   if (!data) {
     throw new Error(
@@ -677,42 +660,33 @@ export async function getDeliveryAssignmentById(
   }
 
   return normalizeAssignmentWithRelations(
-    data as unknown as RawDeliveryAssignment
+    data as RawDeliveryAssignment
   );
 }
 
 export async function getActiveDeliveryAssignmentByOrder(
   orderId: number
 ): Promise<DeliveryAssignmentWithRelations | null> {
-  const id = validatePositiveId(
-    orderId,
-    "pedido"
-  );
-
-  const { data, error } = await supabase
-    .from("delivery_assignments")
-    .select(ASSIGNMENT_WITH_RELATIONS_SELECT)
-    .eq("order_id", id)
-    .in("status", ACTIVE_ASSIGNMENT_STATUSES)
-    .maybeSingle();
-
-  if (error) {
-    logSupabaseError(
-      "Error cargando asignación activa del pedido:",
-      error
+  const id =
+    validatePositiveId(
+      orderId,
+      "pedido"
     );
 
-    throw new Error(
-      getDatabaseErrorMessage(
-        error,
-        "No fue posible verificar la asignación activa del pedido."
-      )
-    );
-  }
+  const query =
+    new URLSearchParams({
+      scope: "active_order",
+      orderId: String(id),
+    });
+
+  const data =
+    await callDeliveryApi({
+      query,
+    });
 
   return data
     ? normalizeAssignmentWithRelations(
-        data as unknown as RawDeliveryAssignment
+        data as RawDeliveryAssignment
       )
     : null;
 }
@@ -720,105 +694,84 @@ export async function getActiveDeliveryAssignmentByOrder(
 export async function getActiveDeliveryAssignmentByDriver(
   driverId: number
 ): Promise<DeliveryAssignmentWithRelations | null> {
-  const id = validatePositiveId(
-    driverId,
-    "repartidor"
-  );
-
-  const { data, error } = await supabase
-    .from("delivery_assignments")
-    .select(ASSIGNMENT_WITH_RELATIONS_SELECT)
-    .eq("driver_id", id)
-    .in("status", ACTIVE_ASSIGNMENT_STATUSES)
-    .maybeSingle();
-
-  if (error) {
-    logSupabaseError(
-      "Error cargando asignación activa del repartidor:",
-      error
+  const id =
+    validatePositiveId(
+      driverId,
+      "repartidor"
     );
 
-    throw new Error(
-      getDatabaseErrorMessage(
-        error,
-        "No fue posible verificar la disponibilidad del repartidor."
-      )
-    );
-  }
+  const query =
+    new URLSearchParams({
+      scope: "active_driver",
+      driverId: String(id),
+    });
+
+  const data =
+    await callDeliveryApi({
+      query,
+    });
 
   return data
     ? normalizeAssignmentWithRelations(
-        data as unknown as RawDeliveryAssignment
+        data as RawDeliveryAssignment
       )
     : null;
 }
 
 export async function getDeliveryAssignmentHistoryByOrder(
   orderId: number
-): Promise<DeliveryAssignmentWithRelations[]> {
-  const id = validatePositiveId(
-    orderId,
-    "pedido"
-  );
+): Promise<
+  DeliveryAssignmentWithRelations[]
+> {
+  const id =
+    validatePositiveId(
+      orderId,
+      "pedido"
+    );
 
-  const { data, error } = await supabase
-    .from("delivery_assignments")
-    .select(ASSIGNMENT_WITH_RELATIONS_SELECT)
-    .eq("order_id", id)
-    .order("assigned_at", {
-      ascending: false,
+  const query =
+    new URLSearchParams({
+      scope: "history_order",
+      orderId: String(id),
     });
 
-  if (error) {
-    logSupabaseError(
-      "Error cargando historial del pedido:",
-      error
-    );
+  const data =
+    await callDeliveryApi({
+      query,
+    });
 
-    throw new Error(
-      getDatabaseErrorMessage(
-        error,
-        "No fue posible cargar el historial logístico del pedido."
-      )
-    );
-  }
-
-  return ((data ?? []) as unknown as RawDeliveryAssignment[]).map(
+  return (
+    (data ?? []) as RawDeliveryAssignment[]
+  ).map(
     normalizeAssignmentWithRelations
   );
 }
 
 export async function getDeliveryAssignmentHistoryByDriver(
   driverId: number
-): Promise<DeliveryAssignmentWithRelations[]> {
-  const id = validatePositiveId(
-    driverId,
-    "repartidor"
-  );
+): Promise<
+  DeliveryAssignmentWithRelations[]
+> {
+  const id =
+    validatePositiveId(
+      driverId,
+      "repartidor"
+    );
 
-  const { data, error } = await supabase
-    .from("delivery_assignments")
-    .select(ASSIGNMENT_WITH_RELATIONS_SELECT)
-    .eq("driver_id", id)
-    .order("assigned_at", {
-      ascending: false,
+  const query =
+    new URLSearchParams({
+      scope: "history_driver",
+      driverId: String(id),
     });
 
-  if (error) {
-    logSupabaseError(
-      "Error cargando historial del repartidor:",
-      error
-    );
+  const data =
+    await callDeliveryApi({
+      query,
+    });
 
-    throw new Error(
-      getDatabaseErrorMessage(
-        error,
-        "No fue posible cargar el historial del repartidor."
-      )
-    );
-  }
-
-  return ((data ?? []) as unknown as RawDeliveryAssignment[]).map(
+  return (
+    (data ?? []) as RawDeliveryAssignment[]
+  ).map(
     normalizeAssignmentWithRelations
   );
 }
@@ -826,60 +779,20 @@ export async function getDeliveryAssignmentHistoryByDriver(
 export async function createDeliveryAssignment(
   input: CreateDeliveryAssignmentInput
 ): Promise<DeliveryAssignmentWithRelations> {
-  const payload = prepareCreatePayload(input);
+  const payload =
+    prepareCreatePayload(input);
 
-  const [
-    existingOrderAssignment,
-    existingDriverAssignment,
-  ] = await Promise.all([
-    getActiveDeliveryAssignmentByOrder(
-      payload.order_id
-    ),
-    getActiveDeliveryAssignmentByDriver(
-      payload.driver_id
-    ),
-  ]);
-
-  if (existingOrderAssignment) {
-    throw new Error(
-      "Este pedido ya tiene una asignación de entrega activa."
-    );
-  }
-
-  if (existingDriverAssignment) {
-    throw new Error(
-      "Este repartidor ya tiene una entrega activa."
-    );
-  }
-
-  const { data, error } = await supabase
-    .from("delivery_assignments")
-    .insert(payload)
-    .select(ASSIGNMENT_WITH_RELATIONS_SELECT)
-    .single();
-
-  if (error) {
-    logSupabaseError(
-      "Error creando asignación de entrega:",
-      error
-    );
-
-    throw new Error(
-      getDatabaseErrorMessage(
-        error,
-        "No fue posible asignar el pedido al repartidor."
-      )
-    );
-  }
-
-  if (!data) {
-    throw new Error(
-      "Supabase no devolvió la asignación creada."
-    );
-  }
+  const data =
+    await callDeliveryApi({
+      method: "POST",
+      body: {
+        action: "create",
+        assignment: payload,
+      },
+    });
 
   return normalizeAssignmentWithRelations(
-    data as unknown as RawDeliveryAssignment
+    data as RawDeliveryAssignment
   );
 }
 
@@ -887,15 +800,17 @@ export async function updateDeliveryAssignmentRoute(
   assignmentId: number,
   input: UpdateDeliveryAssignmentRouteInput
 ): Promise<DeliveryAssignmentWithRelations> {
-  const id = validatePositiveId(
-    assignmentId,
-    "asignación"
-  );
+  const id =
+    validatePositiveId(
+      assignmentId,
+      "asignación"
+    );
 
-  const distanceKm = validateNonNegativeNumber(
-    input.distance_km,
-    "La distancia"
-  );
+  const distanceKm =
+    validateNonNegativeNumber(
+      input.distance_km,
+      "La distancia"
+    );
 
   const estimatedDurationMinutes =
     validateNonNegativeNumber(
@@ -903,79 +818,63 @@ export async function updateDeliveryAssignmentRoute(
       "La duración estimada"
     );
 
-  const payload = {
-    origin_address: cleanOptionalText(
-      input.origin_address
-    ),
-
-    destination_address: cleanOptionalText(
-      input.destination_address
-    ),
-
-    origin_latitude: toNullableNumber(
-      input.origin_latitude
-    ),
-
-    origin_longitude: toNullableNumber(
-      input.origin_longitude
-    ),
-
-    destination_latitude: toNullableNumber(
-      input.destination_latitude
-    ),
-
-    destination_longitude: toNullableNumber(
-      input.destination_longitude
-    ),
-
-    distance_km: distanceKm,
-
-    estimated_duration_minutes:
-      estimatedDurationMinutes === null
-        ? null
-        : Math.round(estimatedDurationMinutes),
-
-    estimated_arrival_at:
-      input.estimated_arrival_at ?? null,
-
-    assignment_notes: cleanOptionalText(
-      input.assignment_notes
-    ),
-
-    delivery_notes: cleanOptionalText(
-      input.delivery_notes
-    ),
-  };
-
-  const { data, error } = await supabase
-    .from("delivery_assignments")
-    .update(payload)
-    .eq("id", id)
-    .select(ASSIGNMENT_WITH_RELATIONS_SELECT)
-    .single();
-
-  if (error) {
-    logSupabaseError(
-      "Error actualizando ruta de entrega:",
-      error
-    );
-
-    throw new Error(
-      getDatabaseErrorMessage(
-        error,
-        "No fue posible actualizar la información de la ruta."
-      )
-    );
-  }
-
-  if (!data) {
-    throw new Error(
-      "No se encontró la asignación que deseas actualizar."
-    );
-  }
+  const data =
+    await callDeliveryApi({
+      method: "PATCH",
+      body: {
+        action: "route",
+        assignmentId: id,
+        route: {
+          origin_address:
+            cleanOptionalText(
+              input.origin_address
+            ),
+          destination_address:
+            cleanOptionalText(
+              input.destination_address
+            ),
+          origin_latitude:
+            toNullableNumber(
+              input.origin_latitude
+            ),
+          origin_longitude:
+            toNullableNumber(
+              input.origin_longitude
+            ),
+          destination_latitude:
+            toNullableNumber(
+              input.destination_latitude
+            ),
+          destination_longitude:
+            toNullableNumber(
+              input.destination_longitude
+            ),
+          distance_km:
+            distanceKm,
+          estimated_duration_minutes:
+            estimatedDurationMinutes ===
+            null
+              ? null
+              : Math.round(
+                  estimatedDurationMinutes
+                ),
+          estimated_arrival_at:
+            input.estimated_arrival_at ??
+            null,
+          assignment_notes:
+            cleanOptionalText(
+              input.assignment_notes
+            ),
+          delivery_notes:
+            cleanOptionalText(
+              input.delivery_notes
+            ),
+        },
+      },
+    });
 
   return normalizeAssignmentWithRelations(
-    data as unknown as RawDeliveryAssignment
+    data as RawDeliveryAssignment
   );
 }
 
@@ -983,77 +882,29 @@ export async function updateDeliveryAssignmentStatus(
   assignmentId: number,
   status: DeliveryAssignmentStatus
 ): Promise<DeliveryAssignmentWithRelations> {
-  const id = validatePositiveId(
-    assignmentId,
-    "asignación"
-  );
-
-  const nextStatus = validateAssignmentStatus(
-    status
-  );
-
-  const now = new Date().toISOString();
-
-  const payload: Record<string, string | null> = {
-    status: nextStatus,
-  };
-
-  if (nextStatus === "Aceptado") {
-    payload.accepted_at = now;
-  }
-
-  if (nextStatus === "Preparando retiro") {
-    payload.preparation_completed_at = null;
-  }
-
-  if (nextStatus === "Pedido retirado") {
-    payload.preparation_completed_at = now;
-    payload.picked_up_at = now;
-  }
-
-  if (nextStatus === "En ruta") {
-    payload.started_at = now;
-  }
-
-  if (nextStatus === "Entregado") {
-    payload.delivered_at = now;
-    payload.cancelled_at = null;
-    payload.cancellation_reason = null;
-  }
-
-  if (nextStatus === "Cancelado") {
-    payload.cancelled_at = now;
-  }
-
-  const { data, error } = await supabase
-    .from("delivery_assignments")
-    .update(payload)
-    .eq("id", id)
-    .select(ASSIGNMENT_WITH_RELATIONS_SELECT)
-    .single();
-
-  if (error) {
-    logSupabaseError(
-      "Error actualizando estado de asignación:",
-      error
+  const id =
+    validatePositiveId(
+      assignmentId,
+      "asignación"
     );
 
-    throw new Error(
-      getDatabaseErrorMessage(
-        error,
-        "No fue posible actualizar el estado de la entrega."
-      )
+  const nextStatus =
+    validateAssignmentStatus(
+      status
     );
-  }
 
-  if (!data) {
-    throw new Error(
-      "No se encontró la asignación que deseas actualizar."
-    );
-  }
+  const data =
+    await callDeliveryApi({
+      method: "PATCH",
+      body: {
+        action: "status",
+        assignmentId: id,
+        status: nextStatus,
+      },
+    });
 
   return normalizeAssignmentWithRelations(
-    data as unknown as RawDeliveryAssignment
+    data as RawDeliveryAssignment
   );
 }
 
@@ -1100,53 +951,31 @@ export async function completeDeliveryAssignment(
     proof_of_delivery_url?: string | null;
   }
 ): Promise<DeliveryAssignmentWithRelations> {
-  const id = validatePositiveId(
-    assignmentId,
-    "asignación"
-  );
-
-  const now = new Date().toISOString();
-
-  const { data, error } = await supabase
-    .from("delivery_assignments")
-    .update({
-      status: "Entregado",
-      delivered_at: now,
-      cancelled_at: null,
-      cancellation_reason: null,
-      delivery_notes: cleanOptionalText(
-        input?.delivery_notes
-      ),
-      proof_of_delivery_url: cleanOptionalText(
-        input?.proof_of_delivery_url
-      ),
-    })
-    .eq("id", id)
-    .select(ASSIGNMENT_WITH_RELATIONS_SELECT)
-    .single();
-
-  if (error) {
-    logSupabaseError(
-      "Error completando entrega:",
-      error
+  const id =
+    validatePositiveId(
+      assignmentId,
+      "asignación"
     );
 
-    throw new Error(
-      getDatabaseErrorMessage(
-        error,
-        "No fue posible completar la entrega."
-      )
-    );
-  }
-
-  if (!data) {
-    throw new Error(
-      "No se encontró la asignación que deseas completar."
-    );
-  }
+  const data =
+    await callDeliveryApi({
+      method: "PATCH",
+      body: {
+        action: "complete",
+        assignmentId: id,
+        deliveryNotes:
+          cleanOptionalText(
+            input?.delivery_notes
+          ),
+        proofOfDeliveryUrl:
+          cleanOptionalText(
+            input?.proof_of_delivery_url
+          ),
+      },
+    });
 
   return normalizeAssignmentWithRelations(
-    data as unknown as RawDeliveryAssignment
+    data as RawDeliveryAssignment
   );
 }
 
@@ -1154,14 +983,16 @@ export async function cancelDeliveryAssignment(
   assignmentId: number,
   cancellationReason: string
 ): Promise<DeliveryAssignmentWithRelations> {
-  const id = validatePositiveId(
-    assignmentId,
-    "asignación"
-  );
+  const id =
+    validatePositiveId(
+      assignmentId,
+      "asignación"
+    );
 
-  const reason = cleanOptionalText(
-    cancellationReason
-  );
+  const reason =
+    cleanOptionalText(
+      cancellationReason
+    );
 
   if (!reason) {
     throw new Error(
@@ -1169,39 +1000,19 @@ export async function cancelDeliveryAssignment(
     );
   }
 
-  const { data, error } = await supabase
-    .from("delivery_assignments")
-    .update({
-      status: "Cancelado",
-      cancelled_at: new Date().toISOString(),
-      cancellation_reason: reason,
-    })
-    .eq("id", id)
-    .select(ASSIGNMENT_WITH_RELATIONS_SELECT)
-    .single();
-
-  if (error) {
-    logSupabaseError(
-      "Error cancelando asignación:",
-      error
-    );
-
-    throw new Error(
-      getDatabaseErrorMessage(
-        error,
-        "No fue posible cancelar la asignación."
-      )
-    );
-  }
-
-  if (!data) {
-    throw new Error(
-      "No se encontró la asignación que deseas cancelar."
-    );
-  }
+  const data =
+    await callDeliveryApi({
+      method: "PATCH",
+      body: {
+        action: "cancel",
+        assignmentId: id,
+        cancellationReason:
+          reason,
+      },
+    });
 
   return normalizeAssignmentWithRelations(
-    data as unknown as RawDeliveryAssignment
+    data as RawDeliveryAssignment
   );
 }
 
@@ -1214,82 +1025,44 @@ export async function reassignDeliveryOrder(
     "order_id" | "driver_id"
   >
 ): Promise<DeliveryAssignmentWithRelations> {
-  const currentAssignment =
-    await getDeliveryAssignmentById(
-      currentAssignmentId
+  const assignmentId =
+    validatePositiveId(
+      currentAssignmentId,
+      "asignación"
     );
 
-  if (
-    currentAssignment.status === "Entregado" ||
-    currentAssignment.status === "Cancelado"
-  ) {
+  const driverId =
+    validatePositiveId(
+      newDriverId,
+      "repartidor"
+    );
+
+  const reason =
+    cleanOptionalText(
+      cancellationReason
+    );
+
+  if (!reason) {
     throw new Error(
-      "Esta asignación ya está cerrada y no puede reasignarse."
+      "Debes registrar el motivo de reasignación."
     );
   }
 
-  const driverId = validatePositiveId(
-    newDriverId,
-    "repartidor"
+  const data =
+    await callDeliveryApi({
+      method: "POST",
+      body: {
+        action: "reassign",
+        assignmentId,
+        newDriverId: driverId,
+        cancellationReason:
+          reason,
+        overrides:
+          overrides ?? null,
+      },
+    });
+
+  return normalizeAssignmentWithRelations(
+    data as RawDeliveryAssignment
   );
-
-  if (driverId === currentAssignment.driver_id) {
-    throw new Error(
-      "Selecciona un repartidor diferente para realizar la reasignación."
-    );
-  }
-
-  await cancelDeliveryAssignment(
-    currentAssignment.id,
-    cancellationReason
-  );
-
-  return createDeliveryAssignment({
-    order_id: currentAssignment.order_id,
-    driver_id: driverId,
-
-    origin_address:
-      overrides?.origin_address ??
-      currentAssignment.origin_address,
-
-    destination_address:
-      overrides?.destination_address ??
-      currentAssignment.destination_address,
-
-    origin_latitude:
-      overrides?.origin_latitude ??
-      currentAssignment.origin_latitude,
-
-    origin_longitude:
-      overrides?.origin_longitude ??
-      currentAssignment.origin_longitude,
-
-    destination_latitude:
-      overrides?.destination_latitude ??
-      currentAssignment.destination_latitude,
-
-    destination_longitude:
-      overrides?.destination_longitude ??
-      currentAssignment.destination_longitude,
-
-    distance_km:
-      overrides?.distance_km ??
-      currentAssignment.distance_km,
-
-    estimated_duration_minutes:
-      overrides?.estimated_duration_minutes ??
-      currentAssignment.estimated_duration_minutes,
-
-    estimated_arrival_at:
-      overrides?.estimated_arrival_at ??
-      currentAssignment.estimated_arrival_at,
-
-    assignment_notes:
-      overrides?.assignment_notes ??
-      currentAssignment.assignment_notes,
-
-    delivery_notes:
-      overrides?.delivery_notes ??
-      currentAssignment.delivery_notes,
-  });
 }
